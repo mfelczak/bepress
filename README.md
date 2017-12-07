@@ -46,3 +46,7 @@ The plugin does not import the following journal content, which can be uploaded 
 - Issue cover images
 
 Please note the bepress Digital Commons import plugin is intended for journal content only and does not support the migration of Digital Commons conference or book content.
+
+## Bugs and Enhancements
+
+We welcome bug reports and fixes via github Issues for this project. Feature enhancements may also be contributed via Pull requests for inclusion into the repository.
