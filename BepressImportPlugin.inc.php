@@ -117,6 +117,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 			closedir($issueHandle);
 
 			$allIssueIds = array();
+			$curIssueId = 0;
 
 			foreach ($importIssues as $issueName){
 				$issuePath = $volumePath . '/' . $issueName;
@@ -129,7 +130,6 @@ class BepressImportPlugin extends ImportExportPlugin {
 				sort($importArticles, SORT_NATURAL);
 				closedir($articleHandle);
 
-				$curIssueId = 0;
 				$currSectionId = 0;
 				$allSectionIds = array();
 
