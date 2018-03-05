@@ -119,7 +119,7 @@ class BepressImportDom {
 		if ($abstractNode) {
 			$abstractText = $abstractNode->getValue();
 			Request::cleanUserVar($abstractText);
-			$abstractText = trim($abstractText);
+			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
 			if ($abstractText) $this->_article->setAbstract($abstractText, $this->_primaryLocale);
 		}
 
@@ -532,7 +532,7 @@ class BepressImportDom {
 		$titleNode = $this->_articleNode->getChildByName('title');
 		$title = $titleNode->getValue();
 		Request::cleanUserVar($title);
-		$this->_articleTitle = trim($title);
+		$this->_articleTitle = html_entity_decode(trim($title), ENT_HTML5);
 	}
 
 	function _cleanupFailure() {
