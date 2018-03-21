@@ -50,3 +50,7 @@ Please note the bepress Digital Commons import plugin is intended for journal co
 ## Bugs and Enhancements
 
 We welcome bug reports and fixes via github Issues for this project. Feature enhancements may also be contributed via Pull requests for inclusion into the repository.
+
+## CSV to XML Conversion Script
+
+The following CSV to XML conversion script may provide a starting point for converting Bepress metadata to import XML metadata used by this plugin: https://github.com/journalprivacyconfidentiality/jpc-migration
