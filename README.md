@@ -1,5 +1,5 @@
 # OJS bepress Digital Commons import plugin
-Plugin to import bepress Digital Commons journal to OJS 3.1.0-1 or newer
+Plugin to import bepress Digital Commons journal to OJS 3.1.1 or newer
 
 ## Requirements
 
