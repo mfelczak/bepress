@@ -113,14 +113,28 @@ class BepressImportDom {
 		$this->_article->setSubmissionProgress(0);
 		$this->_article->setTitle($this->_articleTitle, $this->_primaryLocale);
 
-		// Get article abstract if it exists
+		// Get article abstract if it exists, possibly in multiple locales
 		$abstractText = '';
 		$abstractNode = $this->_articleNode->getChildByName('abstract');
 		if ($abstractNode) {
+			$abstractLocale = $abstractNode->getAttribute('locale');
+			if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
 			$abstractText = $abstractNode->getValue();
 			Request::cleanUserVar($abstractText);
 			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
-			if ($abstractText) $this->_article->setAbstract($abstractText, $this->_primaryLocale);
+			if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
+		} else {
+			$abstractsNode = $this->_articleNode->getChildByName('abstracts');
+			if ($abstractsNode){
+				for ($i = 0; $abstractNode = $abstractsNode->getChildByName('abstract', $i); $i++){
+					$abstractLocale = $abstractNode->getAttribute('locale');
+					if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
+					$abstractText = $abstractNode->getValue();
+					Request::cleanUserVar($abstractText);
+					$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
+					if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
+				}
+			}
 		}
 
 		// Retrieve license and date published fields if available
