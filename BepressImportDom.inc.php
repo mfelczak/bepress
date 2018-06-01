@@ -160,6 +160,22 @@ class BepressImportDom {
 			}
 		}
 
+		// Retrieve article pages if provided
+		$firstPageNode = $this->_articleNode->getChildByName('fpage');
+		if ($firstPageNode) {
+			$firstPage = $firstPageNode->getValue();
+			if ($firstPage) {
+				$lastPageNode = $this->_articleNode->getChildByName('lpage');
+				if ($lastPageNode) {
+					$lastPage = $lastPageNode->getValue();
+					if ($lastPage) {
+						$pages = $firstPage . "-" . $lastPage;
+						$this->_article->setPages($pages);
+					}
+				}
+			}
+		}
+
 		$checkDate = date_parse($articlePublicationDate);
 		if (!$checkDate || !checkdate($checkDate['month'], $checkDate['day'], $checkDate['year'])) {
 			$articlePublicationDate = $this->_issue->getDatePublished();
