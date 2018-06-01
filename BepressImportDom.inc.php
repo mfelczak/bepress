@@ -265,6 +265,16 @@ class BepressImportDom {
 		$publishedArticle->setSequence($this->_article->getId());
 		$publishedArticleDao->insertObject($publishedArticle);
 
+		// Set DOI if provided
+		$articleIdNode = $this->_articleNode->getChildByName('article-id');
+		if ($articleIdNode) {
+			$pubIdType = $articleIdNode->getAttribute('pub-id-type');
+			if ($pubIdType == 'doi') {
+				$doiValue = $articleIdNode->getValue();
+				if ($doiValue) $publishedArticleDao->updateSetting($this->_article->getId(), 'pub-id::doi', $doiValue, 'string', false);
+			}
+		}
+
 		// Set copyright year and holder and license permissions
 		$copyrightYear = date("Y", strtotime($articlePublicationDate));
 		$copyrightHolder = $this->_article->getAuthorString();
