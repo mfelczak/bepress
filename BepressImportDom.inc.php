@@ -518,7 +518,6 @@ class BepressImportDom {
 			$this->_pdfPath,
 			SUBMISSION_FILE_PROOF,
 			$this->_editor->getId(),
-			$this->_editorGroupId,
 			null,
 			$genre->getId(),
 			ASSOC_TYPE_REPRESENTATION,
