@@ -13,6 +13,6 @@
 <version>
 	<application>bepress</application>
 	<type>plugins.importexport</type>
-	<release>1.0.0.0</release>
-	<date>2017-12-05</date>
+	<release>3.1.2.0</release>
+	<date>2019-12-09</date>
 </version>

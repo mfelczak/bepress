@@ -21,7 +21,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 	 * @return boolean True iff plugin initialized successfully; if false,
 	 * 	the plugin will not be registered.
 	 */
-	function register($category, $path) {
+	function register($category, $path, $mainContextId = null) {
 		$success = parent::register($category, $path);
 		$this->addLocaleData();
 		return $success;
@@ -135,7 +135,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 
 				foreach ($importArticles as $entry) {
 					$articlePath = $issuePath . '/' . $entry;
-					if (!is_dir($articlePath) || preg_match('/^\./', $entry) || !$entry) continue;
+					if (!is_dir($articlePath) || preg_match('/^\./', $entry)) continue;
 
 					// Process all article files
 					$articleFileHandle = opendir($articlePath);
@@ -153,7 +153,6 @@ class BepressImportPlugin extends ImportExportPlugin {
 							$pdfArticleFile = $articlePath . '/' . $importFile;
 						}
 					}
-
 					if (!$xmlArticleFile || !$pdfArticleFile) continue;
 
 					if (is_file($xmlArticleFile)) {
@@ -164,7 +163,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 							$number = array_shift(array_shift($number));
 
 							$volume = null;
-							preg_match_all('/\d+/',basename(dirname(dirname(dirname($xmlArticleFile)))), $volume);
+							preg_match_all('/\d+/',basename(dirname(dirname($xmlArticleFile))), $volume);
 							$volume = array_shift(array_shift($volume));
 							$importDom = new BepressImportDom(
 									$journal,
@@ -212,7 +211,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 			}
 
 			// Add default custom section ordering for TOC
-			$sectionDao =& DAORegistry::getDAO('SectionDAO');
+			$sectionDao = DAORegistry::getDAO('SectionDAO');
 			$numSections = 0;
 
 			// Add each section in order for articles
@@ -222,13 +221,13 @@ class BepressImportPlugin extends ImportExportPlugin {
 		}
 
 		// Setup default custom issue order
-		$issueDao =& DAORegistry::getDAO('IssueDAO');
+		$issueDao = DAORegistry::getDAO('IssueDAO');
 		$issueDao->setDefaultCustomIssueOrders($journal->getId());
 
 		// Set latest imported issue as current issue
 		if (!empty($allIssueIds)) {
 			$lastIssueId = array_pop($allIssueIds);
-			$lastIssue =& $issueDao->getById($lastIssueId);
+			$lastIssue = $issueDao->getById($lastIssueId);
 			$lastIssue->setCurrent(1);
 			$issueDao->updateObject($lastIssue);
 		}
@@ -247,9 +246,9 @@ class BepressImportPlugin extends ImportExportPlugin {
 		)) . "\n";
 	}
 
-	function &getDocument($fileName) {
+	function getDocument($fileName) {
 		$parser = new XMLParser();
-		$returner =& $parser->parse($fileName);
+		$returner = $parser->parse($fileName);
 		return $returner;
 	}
 }

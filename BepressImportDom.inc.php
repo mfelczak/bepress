@@ -120,7 +120,6 @@ class BepressImportDom {
 			$abstractLocale = $abstractNode->getAttribute('locale');
 			if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
 			$abstractText = $abstractNode->getValue();
-			Request::cleanUserVar($abstractText);
 			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
 			if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
 		} else {
@@ -130,7 +129,6 @@ class BepressImportDom {
 					$abstractLocale = $abstractNode->getAttribute('locale');
 					if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
 					$abstractText = $abstractNode->getValue();
-					Request::cleanUserVar($abstractText);
 					$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
 					if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
 				}
@@ -149,7 +147,6 @@ class BepressImportDom {
 					switch ($fieldName) {
 						case 'distribution_license':
 							$licenseUrl = $fieldValueNode->getValue();
-							Request::cleanUserVar($licenseUrl);
 							$licenseUrl = filter_var(trim($licenseUrl), FILTER_VALIDATE_URL);
 							continue;
 						case 'publication_date':
@@ -409,7 +406,6 @@ class BepressImportDom {
 		}
 
 		if ($sectionName) {
-			Request::cleanUserVar($sectionName);
 			$sectionName = trim($sectionName);
 		} else {
 			$sectionName = 'Articles';
@@ -495,10 +491,13 @@ class BepressImportDom {
 		$email = $authorNode->getChildValue('email');
 		$affiliation = $authorNode->getChildValue('institution');
 
-		$author->setFirstName(isset($fname)? $fname : '');
-		$author->setLastName(isset($lname)? $lname : $this->_journal->getName($this->_primaryLocale));
-		$author->setMiddleName((isset($mname))? $mname : '');
-		$author->setSuffix(isset($suffix)? $suffix : '');
+		$author->setGivenName(isset($fname)? $fname : '', $this->_primaryLocale);
+		$author->setFamilyName(isset($lname)? $lname : $this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
+
+		if (isset($mname) || isset($suffix)) {
+			$author->setPreferredPublicName(trim("$fname $mname $lname $suffix") , $this->_primaryLocale);
+		}
+
 		$author->setEmail(isset($email)? $email : $this->_defaultEmail);
 		$author->setAffiliation((isset($affiliation)? $affiliation : ''), $this->_primaryLocale);
 
@@ -554,6 +553,7 @@ class BepressImportDom {
 
 		$submissionFileManager = new SubmissionFileManager($this->_journal->getId(), $this->_article->getId());
 
+		import('lib.pkp.classes.submission.SubmissionFile'); // constants
 		$submissionFile = $submissionFileManager->copySubmissionFile(
 			$this->_pdfPath,
 			SUBMISSION_FILE_PROOF,
@@ -570,7 +570,6 @@ class BepressImportDom {
 	function _getArticleTitle() {
 		$titleNode = $this->_articleNode->getChildByName('title');
 		$title = $titleNode->getValue();
-		Request::cleanUserVar($title);
 		$this->_articleTitle = html_entity_decode(trim($title), ENT_HTML5);
 	}
 
