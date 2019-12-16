@@ -163,7 +163,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 							$number = array_shift(array_shift($number));
 
 							$volume = null;
-							preg_match_all('/\d+/',basename(dirname(dirname($xmlArticleFile))), $volume);
+							preg_match_all('/\d+/',basename(dirname(dirname(dirname($xmlArticleFile)))), $volume);
 							$volume = array_shift(array_shift($volume));
 							$importDom = new BepressImportDom(
 									$journal,
