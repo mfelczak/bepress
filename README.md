@@ -31,12 +31,12 @@ This plugin will need to be installed in your **OJS 3.1.1 or newer** installatio
 - The destination folder for the plugin should be `plugins/importexport/bepress`
 
 For example, to install this plugin via git for OJS 3.1.2:
-`cd /path/to/ojs`
-`git clone https://github.com/mfelczak/bepress.git plugins/importexport/bepress`
-`cd plugins/importexport/bepress`
-`git checkout -b stable-3_1_2 origin/stable-3_1_2`
-`cd ../../..`
-`php lib/pkp/tools/installPluginVersion.php plugins/importexport/bepress/version.xml`
+- `cd /path/to/ojs`
+- `git clone https://github.com/mfelczak/bepress.git plugins/importexport/bepress`
+- `cd plugins/importexport/bepress`
+- `git checkout -b stable-3_1_2 origin/stable-3_1_2`
+- `cd ../../..`
+- `php lib/pkp/tools/installPluginVersion.php plugins/importexport/bepress/version.xml`
 
 ### OJS setup
 Your OJS install will also need to include the following:
