@@ -3,9 +3,18 @@ Plugin to import bepress Digital Commons journal to OJS 3.1.1 or newer
 
 ## Requirements
 
-To get started, you will need to export your Digital Commons published article metadata and galley files.
+### Import Files
+To get started you will need to request an export archive of your Digital Commons journal article metadata (metadata.xml) and galley files (fulltext.pdf) for all published articles. The article metadata XML will be in a [custom document-export format](sample-metadata.xml).
 
-Exported files will need to be placed on your OJS server using the following directory convention:
+You will need to review your metadata XML files and ensure that all required data is included. If needed, the metadata.xml files can be edited to manually add any missing, required metadata. The following metadata fields are required:
+
+- title
+- author name and email
+- publication date
+- section/type
+- volume/issue
+
+Import files will need to be placed in your OJS server directory, using the following path convention:
 - `bepress_xml/journalName/vol#/iss#/#`
 
 where:
@@ -16,12 +25,24 @@ where:
 - `iss#` is the issue number folder that contains all articles for the issue
 - `#` is the article # folder that contains the article metadata.xml and fulltext.pdf files
 
-You will need an **OJS 3.1.0-1 or newer** installation with the following:
-- a destination journal for imported content
+### Plugin installation
+This plugin will need to be installed in your **OJS 3.1.1 or newer** installation:
+- Ensure that the plugin branch/version matches your version of OJS
+- The destination folder for the plugin should be `plugins/importexport/bepress`
+
+For example, to install this plugin via git for OJS 3.1.2:
+`cd /path/to/ojs`
+`git clone https://github.com/mfelczak/bepress.git plugins/importexport/bepress`
+`cd plugins/importexport/bepress`
+`git checkout -b stable-3_1_2 origin/stable-3_1_2`
+`cd ../../..`
+`php lib/pkp/tools/installPluginVersion.php plugins/importexport/bepress/version.xml`
+
+### OJS setup
+Your OJS install will also need to include the following:
+- a destination journal in OJS for imported content
 - an Author user that should be used as the default account for imported articles
 - an Editor user that should be assigned to imported articles
-
-You will need to install the bepress import plugin in your OJS installation to `plugins/importexport/bepress`
 
 ## Usage
 
