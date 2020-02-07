@@ -32,6 +32,8 @@
 <submission-date>2017-08-29T12:18:09-07:00</submission-date>
 <publication-title>Journal Name</publication-title>
 <fields>
+<field name="doi" type="string">
+<value>10.5555/12345678</value>
 </field>
 <field name="peer_reviewed" type="boolean">
 <value>true</value>
