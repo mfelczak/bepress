@@ -1,7 +1,7 @@
 # OJS bepress Digital Commons import plugin
 Plugin to import bepress Digital Commons journal to OJS 3.1.1 or newer.
 
-This branch is for OJS 3.2 compatibility. If you're working with OJS 3.1.1 or OJS 3.1.2 please use the corresponding branches.
+**This branch is under active development to add OJS 3.2 compatibility and is not ready for production use.** If you're working with OJS 3.1.1 or OJS 3.1.2 please use the corresponding branches.
 
 ## Requirements
 
