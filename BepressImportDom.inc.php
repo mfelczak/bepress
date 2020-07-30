@@ -15,7 +15,7 @@ import('lib.pkp.classes.xml.XMLCustomWriter');
 import('lib.pkp.classes.file.SubmissionFileManager');
 import('classes.issue.Issue');
 import('classes.journal.Section');
-import('classes.article.Article');
+import('classes.submission.Submission');
 import('classes.article.Author');
 import('classes.search.ArticleSearchIndex');
 
@@ -27,7 +27,7 @@ class BepressImportDom {
 	var $_xmlArticle = null;
 	var $_articleNode = null;
 	var $_articleTitle = null;
-	var $_article = null;
+	var $_submission = null;
 	var $_section = null;
 	var $_issue = null;
 	var $_primaryLocale = null;
@@ -99,48 +99,24 @@ class BepressImportDom {
 			return null;
 		}
 
-		// We have an issue and section, we can now process the article
-		$publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO');
-		$articleDao = DAORegistry::getDAO('ArticleDAO');
+		// We have an issue and section, we can now process the article submission and publication object
+		$submissionDao = DAORegistry::getDAO('SubmissionDAO');
 
-		$this->_article = new Article();
-		$this->_article->setLocale($this->_primaryLocale);
-		$this->_article->setLanguage('en');
-		$this->_article->setJournalId($this->_journal->getId());
-		$this->_article->setSectionId($this->_section->getId());
-		$this->_article->setStatus(STATUS_PUBLISHED);
-		$this->_article->setStageId(WORKFLOW_STAGE_ID_PRODUCTION);
-		$this->_article->setSubmissionProgress(0);
-		$this->_article->setTitle($this->_articleTitle, $this->_primaryLocale);
-
-		// Get article abstract if it exists, possibly in multiple locales
-		$abstractText = '';
-		$abstractNode = $this->_articleNode->getChildByName('abstract');
-		if ($abstractNode) {
-			$abstractLocale = $abstractNode->getAttribute('locale');
-			if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
-			$abstractText = $abstractNode->getValue();
-			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
-			if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
-		} else {
-			$abstractsNode = $this->_articleNode->getChildByName('abstracts');
-			if ($abstractsNode){
-				for ($i = 0; $abstractNode = $abstractsNode->getChildByName('abstract', $i); $i++){
-					$abstractLocale = $abstractNode->getAttribute('locale');
-					if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
-					$abstractText = $abstractNode->getValue();
-					$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
-					if ($abstractText) $this->_article->setAbstract($abstractText, $abstractLocale);
-				}
-			}
-		}
+		// We process the submission first
+		$this->_submission = $submissionDao->newDataObject();
+		$this->_submission->setData('contextId', $this->_journal->getId());
+		$this->_submission->stampModified();
+		$this->_submission->setData('locale', $this->_primaryLocale);
+		$this->_submission->setData('status', STATUS_PUBLISHED);
+		$this->_submission->setData('stageId', WORKFLOW_STAGE_ID_PRODUCTION);
+		$this->_submission->setData('submissionProgress', 0);
 
 		// Retrieve license and date published fields if available
 		$fieldsNode = $this->_articleNode->getChildByName('fields');
 		$licenseUrl = null;
 		$articlePublicationDate = null;
-		if ($fieldsNode){
-			for ($i = 0; $fieldNode = $fieldsNode->getChildByName('field', $i); $i++){
+		if ($fieldsNode) {
+			for ($i = 0; $fieldNode = $fieldsNode->getChildByName('field', $i); $i++) {
 				$fieldName = $fieldNode->getAttribute('name');
 				$fieldValueNode = $fieldNode->getChildByName('value');
 				if ($fieldValueNode) {
@@ -155,22 +131,6 @@ class BepressImportDom {
 						case 'doi':
 							$doiValue = $fieldValueNode->getValue();
 							continue;
-					}
-				}
-			}
-		}
-
-		// Retrieve article pages if provided
-		$firstPageNode = $this->_articleNode->getChildByName('fpage');
-		if ($firstPageNode) {
-			$firstPage = $firstPageNode->getValue();
-			if ($firstPage) {
-				$lastPageNode = $this->_articleNode->getChildByName('lpage');
-				if ($lastPageNode) {
-					$lastPage = $lastPageNode->getValue();
-					if ($lastPage) {
-						$pages = $firstPage . "-" . $lastPage;
-						$this->_article->setPages($pages);
 					}
 				}
 			}
@@ -197,92 +157,104 @@ class BepressImportDom {
 			$submissionDate = $articlePublicationDate;
 		}
 
-		$this->_article->setDateSubmitted($submissionDate);
-		$this->_article->setDateStatusModified($articlePublicationDate);
+		$this->_submission->setData('dateSubmitted', $submissionDate);
+		$this->_submission->setData('dateLastActivity', $articlePublicationDate);
 
-		// Add article
-		$articleDao->insertObject($this->_article);
+		// Add article submission
+		$submissionId = $submissionDao->insertObject($this->_submission);
+		$this->_submission = $submissionDao->getById($submissionId);
 		$this->_dependentItems[] = 'article';
+
+		// Create publication object and add info
+		$publicationDao = DAORegistry::getDAO('PublicationDAO');
+
+		$publication = $publicationDao->newDataObject();
+		/** @var $publication PKPPublication */
+		$publication->setData('submissionId', $this->_submission->getId());
+		$publication->setData('locale', $this->_primaryLocale);
+		$publication->setData('languages', 'en');
+		$publication->setData('sectionId', $this->_section->getId());
+		$publication->setData('issueId', $this->_issue->getId());
+		$publication->setData('datePublished', $articlePublicationDate);
+		$publication->setData('accessStatus', ARTICLE_ACCESS_OPEN);
+		$publication->setData('seq', $this->_submission->getId());
+		$publication->setData('title', $this->_articleTitle, $this->_primaryLocale);
+
+		$publication->stampModified();
+		$publication->setData('status', STATUS_PUBLISHED);
+		$publication->setData('version', 1);
+
+		// Get article abstract if it exists, possibly in multiple locales
+		$abstractText = '';
+		$abstractNode = $this->_articleNode->getChildByName('abstract');
+		if ($abstractNode) {
+			$abstractLocale = $abstractNode->getAttribute('locale');
+			if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
+			$abstractText = $abstractNode->getValue();
+			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
+			if ($abstractText) $publication->setData('abstract', $abstractText, $abstractLocale);
+
+		} else {
+			$abstractsNode = $this->_articleNode->getChildByName('abstracts');
+			if ($abstractsNode) {
+				for ($i = 0; $abstractNode = $abstractsNode->getChildByName('abstract', $i); $i++) {
+					$abstractLocale = $abstractNode->getAttribute('locale');
+					if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
+					$abstractText = $abstractNode->getValue();
+					$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
+					if ($abstractText) $publication->setData('abstract', $abstractText, $abstractLocale);
+
+				}
+			}
+		}
+
+		// Retrieve article pages if provided
+		$firstPageNode = $this->_articleNode->getChildByName('fpage');
+		if ($firstPageNode) {
+			$firstPage = $firstPageNode->getValue();
+			if ($firstPage) {
+				$lastPageNode = $this->_articleNode->getChildByName('lpage');
+				if ($lastPageNode) {
+					$lastPage = $lastPageNode->getValue();
+					if ($lastPage) {
+						$pages = $firstPage . "-" . $lastPage;
+						$publication->setData('pages', $pages);
+					}
+				}
+			}
+		}
+
+		// Insert publication entry
+		$publicationId = $publicationDao->insertObject($publication);
+		$publication = $publicationDao->getById($publicationId);
+
+		// Create association between new publication version and article submission
+		$newSubmission = $submissionDao->newDataObject();
+		$newSubmission->_data = array_merge($this->_submission->_data, ['currentPublicationId' => $publication->getId()]);
+		$submissionDao->updateObject($newSubmission);
+		$this->_submission = $submissionDao->getById($newSubmission->getId());
 
 		// Process authors and assign to article
 		$this->_processAuthors();
-
-		// Process article keywords
-		$submissionKeywordDAO = DAORegistry::getDAO('SubmissionKeywordDAO');
-		$keywordsNode = $this->_articleNode->getChildByName('keywords');
-		$keywords[$this->_primaryLocale] = array();
-		if ($keywordsNode){
-			for ($i = 0; $keywordNode = $keywordsNode->getChildByName('keyword', $i); $i++){
-				$keywordText = $keywordNode->getValue();
-				// Check if all keywords are in single element separated by ;
-				$curKeywords = explode(';', $keywordText);
-				foreach ($curKeywords as $curKeyword) {
-					$keywords[$this->_primaryLocale][] = $curKeyword;
-				}
-			}
-		}
-		$submissionKeywordDAO->insertKeywords($keywords, $this->_article->getId());
-
-		// Process article subjects
-		$submissionSubjectDAO = DAORegistry::getDAO('SubmissionSubjectDAO');
-		$subjectsNode = $this->_articleNode->getChildByName('subject-areas');
-		$subjects[$this->_primaryLocale] = array();
-		if ($subjectsNode){
-			for ($i = 0; $subjectNode = $subjectsNode->getChildByName('subject-area', $i); $i++){
-				$subjectText = $subjectNode->getValue();
-				// Check if all subjects are in single element separated by ;
-				$curSubjects = explode(';', $subjectText);
-				foreach ($curSubjects as $curSubject) {
-					$subjects[$this->_primaryLocale][] = $curSubject;
-				}
-			}
-		}
-		$submissionSubjectDAO->insertSubjects($subjects, $this->_article->getId());
-
-		// Process article disciplines
-		$submissionDisciplineDAO = DAORegistry::getDAO('SubmissionDisciplineDAO');
-		$disciplinesNode = $this->_articleNode->getChildByName('disciplines');
-		$disciplines[$this->_primaryLocale] = array();
-		if ($disciplinesNode){
-			for ($i = 0; $disciplineNode = $disciplinesNode->getChildByName('discipline', $i); $i++){
-				$disciplineText = $disciplineNode->getValue();
-				// Check if all disciplines are in single element separated by ;
-				$curDisciplines = explode(';', $disciplineText);
-				foreach ($curDisciplines as $curDiscipline) {
-					$disciplines[$this->_primaryLocale][] = $curDiscipline;
-				}
-			}
-		}
-		$submissionDisciplineDAO->insertDisciplines($disciplines, $this->_article->getId());
 
 		// Assign editor as participant in production stage
 		$userGroupId = null;
 		$userGroupDao = DAORegistry::getDAO('UserGroupDAO');
 		$userGroupIds = $userGroupDao->getUserGroupIdsByRoleId(ROLE_ID_MANAGER, $this->_journal->getId());
 		foreach ($userGroupIds as $editorGroupId) {
-			if ($userGroupDao->userGroupAssignedToStage($editorGroupId, $this->_article->getStageId())) break;
+			if ($userGroupDao->userGroupAssignedToStage($editorGroupId, $this->_submission->getData('stageId'))) break;
 		}
 		if ($editorGroupId) {
 			$this->_editorGroupId = $editorGroupId;
 			$stageAssignmentDao = DAORegistry::getDAO('StageAssignmentDAO');
-			$stageAssignment = $stageAssignmentDao->build($this->_article->getId(), $editorGroupId, $this->_editor->getId());
+			$stageAssignment = $stageAssignmentDao->build($this->_submission->getId(), $editorGroupId, $this->_editor->getId());
 		} else {
 			$this->_errors[] = array('plugins.importexport.bepress.import.error.missingEditorGroupId', array());
 			return null;
 		}
 
-		// Insert published article entry
-		$publishedArticle = new PublishedArticle();
-		$publishedArticle->setId($this->_article->getId());
-		$publishedArticle->setSectionId($this->_article->getSectionId());
-		$publishedArticle->setIssueId($this->_issue->getId());
-		$publishedArticle->setDatePublished($articlePublicationDate);
-		$publishedArticle->setAccessStatus(ARTICLE_ACCESS_OPEN);
-		$publishedArticle->setSequence($this->_article->getId());
-		$publishedArticleDao->insertObject($publishedArticle);
-
 		// Set DOI if provided via article-id rather than field tag
-		if (!$doiValue) {
+		if (!isset($doiValue)) {
 			$articleIdNode = $this->_articleNode->getChildByName('article-id');
 			if ($articleIdNode) {
 				$pubIdType = $articleIdNode->getAttribute('pub-id-type');
@@ -291,34 +263,101 @@ class BepressImportDom {
 				}
 			}
 		}
-		if ($doiValue) $publishedArticleDao->updateSetting($this->_article->getId(), 'pub-id::doi', $doiValue, 'string', false);
+
+		if (isset($doiValue)) $publicationDao->changePubId($this->_submission->getCurrentPublication()->getId(), 'doi', $doiValue);
 
 		// Set copyright year and holder and license permissions
 		$copyrightYear = date("Y", strtotime($articlePublicationDate));
-		$copyrightHolder = $this->_article->getAuthorString();
-		if ($copyrightHolder) $this->_article->setCopyrightHolder($copyrightHolder, $this->_primaryLocale);
-		if ($copyrightYear) $this->_article->setCopyrightYear($copyrightYear);
-		if ($licenseUrl) $this->_article->setLicenseURL($licenseUrl);
+		// FIXME: `Submission::getAuthorString()` deprecated in 3.2.0.0
+		$copyrightHolder = $this->_submission->getAuthorString();
+
+		// Create new temp publication to add license info
+		$newPublication = $publicationDao->newDataObject();
+
+		if ($copyrightHolder) $newPublication->setData('copyrightHolder', $copyrightHolder, $this->_primaryLocale);
+		if ($copyrightYear) $newPublication->setData('copyrightYear', $copyrightYear);
+		if ($licenseUrl) $newPublication->setData('licenseUrl', $licenseUrl);
 
 		// Use journal defaults for missing copyright/license info
-		$this->_article->initializePermissions();
+		if (!$newPublication->getData('copyrightHolder')) {
+			$newPublication->setData('copyrightHolder', $this->_submission->_getContextLicenseFieldValue(null, PERMISSIONS_FIELD_COPYRIGHT_HOLDER, $publication));
+		}
+		//$this->_submission->setData('status',STATUS_PUBLISHED);
+		if (!$newPublication->getData('copyrightYear') && $this->_submission->getData('status') == STATUS_PUBLISHED) {
+			$newPublication->setData('copyrightYear', $this->_submission->_getContextLicenseFieldValue(null, PERMISSIONS_FIELD_COPYRIGHT_YEAR, $publication));
+		}
+		if (!$newPublication->getData('licenseUrl')) {
+			$newPublication->setData('licenseUrl', $this->_submission->_getContextLicenseFieldValue(null, PERMISSIONS_FIELD_LICENSE_URL, $publication));
+		}
 
 		// Update copyright/license info
-		$articleDao->updateLocaleFields($this->_article);
+		$newPublication->_data = array_merge($publication->_data, $newPublication->_data);
+		$publicationDao->updateObject($newPublication);
+		$publication = $publicationDao->getById($newPublication->getId());
+
+		// We process controlled vocab metadata after license to prevent their removal when updating publication object.
+
+		// Process article keywords
+		$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO'); /* @var $submissionKeywordDao SubmissionKeywordDAO */
+		$keywordsNode = $this->_articleNode->getChildByName('keywords');
+		$keywords[$this->_primaryLocale] = array();
+		if ($keywordsNode) {
+			for ($i = 0; $keywordNode = $keywordsNode->getChildByName('keyword', $i); $i++) {
+				$keywordText = $keywordNode->getValue();
+				// Check if all keywords are in single element separated by ;
+				$curKeywords = explode(';', $keywordText);
+				foreach ($curKeywords as $curKeyword) {
+					$keywords[$this->_primaryLocale][] = $curKeyword;
+				}
+			}
+		}
+		$submissionKeywordDao->insertKeywords($keywords, $this->_submission->getCurrentPublication()->getId());
+
+		// Process article subjects
+		$submissionSubjectDAO = DAORegistry::getDAO('SubmissionSubjectDAO');
+		$subjectsNode = $this->_articleNode->getChildByName('subject-areas');
+		$subjects[$this->_primaryLocale] = array();
+		if ($subjectsNode) {
+			for ($i = 0; $subjectNode = $subjectsNode->getChildByName('subject-area', $i); $i++) {
+				$subjectText = $subjectNode->getValue();
+				// Check if all subjects are in single element separated by ;
+				$curSubjects = explode(';', $subjectText);
+				foreach ($curSubjects as $curSubject) {
+					$subjects[$this->_primaryLocale][] = $curSubject;
+				}
+			}
+		}
+		$submissionSubjectDAO->insertSubjects($subjects, $this->_submission->getCurrentPublication()->getId());
+
+		// Process article disciplines
+		$submissionDisciplineDAO = DAORegistry::getDAO('SubmissionDisciplineDAO');
+		$disciplinesNode = $this->_articleNode->getChildByName('disciplines');
+		$disciplines[$this->_primaryLocale] = array();
+		if ($disciplinesNode) {
+			for ($i = 0; $disciplineNode = $disciplinesNode->getChildByName('discipline', $i); $i++) {
+				$disciplineText = $disciplineNode->getValue();
+				// Check if all disciplines are in single element separated by ;
+				$curDisciplines = explode(';', $disciplineText);
+				foreach ($curDisciplines as $curDiscipline) {
+					$disciplines[$this->_primaryLocale][] = $curDiscipline;
+				}
+			}
+		}
+		$submissionDisciplineDAO->insertDisciplines($disciplines, $this->_submission->getCurrentPublication()->getId());
 
 		// Handle PDF galleys
 		$this->_handlePDFGalleyNode();
 
 		// Index the article
 		$articleSearchIndex = new ArticleSearchIndex();
-		$articleSearchIndex->articleMetadataChanged($this->_article);
-		$articleSearchIndex->submissionFilesChanged($this->_article);
-		$articleSearchIndex->articleChangesFinished();
+		$articleSearchIndex->submissionMetadataChanged($this->_submission);
+		$articleSearchIndex->submissionFilesChanged($this->_submission);
+		$articleSearchIndex->submissionChangesFinished();
 
 		$returner = array(
-				'issue' => $this->_issue,
-				'section' => $this->_section,
-				'article' => $this->_article
+			'issue' => $this->_issue,
+			'section' => $this->_section,
+			'article' => $this->_submission
 		);
 		return $returner;
 	}
@@ -368,9 +407,13 @@ class BepressImportDom {
 		if (preg_match('/^\d$/', $day)) { $day = '0' . $day; }
 		$publishedDate = $year . '-' . $month . '-' . $day;
 
+		// Set a title for issue (required field)
+		$issueTitle = "Vol. " . $this->_volume . ", No. " . $this->_number . " (" . $year . ")";
+
 		// Create new issue
 		$this->_issue = new Issue();
 		$this->_issue->setJournalId($this->_journal->getId());
+		$this->_issue->setTitle($issueTitle, $this->_primaryLocale);
 		$this->_issue->setVolume((int)$this->_volume);
 		$this->_issue->setNumber((int)$this->_number);
 		$this->_issue->setYear((int)$year);
@@ -496,20 +539,21 @@ class BepressImportDom {
 		$email = $authorNode->getChildValue('email');
 		$affiliation = $authorNode->getChildValue('institution');
 
-		$author->setGivenName(isset($fname)? $fname : '', $this->_primaryLocale);
-		$author->setFamilyName(isset($lname)? $lname : $this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
+		$author->setGivenName(isset($fname) ? $fname : '', $this->_primaryLocale);
+		$author->setFamilyName(isset($lname) ? $lname : $this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
 
 		if (isset($mname) || isset($suffix)) {
-			$author->setPreferredPublicName(trim("$fname $mname $lname $suffix") , $this->_primaryLocale);
+			$author->setPreferredPublicName(trim("$fname $mname $lname $suffix"), $this->_primaryLocale);
 		}
 
-		$author->setEmail(isset($email)? $email : $this->_defaultEmail);
-		$author->setAffiliation((isset($affiliation)? $affiliation : ''), $this->_primaryLocale);
+		$author->setEmail(isset($email) ? $email : $this->_defaultEmail);
+		$author->setAffiliation((isset($affiliation) ? $affiliation : ''), $this->_primaryLocale);
 
 		$author->setSequence($authorIndex + 1); // 1-based
-		$author->setSubmissionId($this->_article->getId());
+		$author->setSubmissionId($this->_submission->getId());
+		$author->setData('publicationId', $this->_submission->getCurrentPublication()->getId());
 		$author->setIncludeInBrowse(true);
-		$author->setPrimaryContact($authorIndex == 0 ? 1:0);
+		$author->setPrimaryContact($authorIndex == 0 ? 1 : 0);
 
 		if ($userGroupId) $author->setUserGroupId($userGroupId);
 
@@ -526,7 +570,7 @@ class BepressImportDom {
 		$author->setFirstName('');
 		$author->setLastName($this->_journal->getName($this->_primaryLocale));
 		$author->setSequence(1);
-		$author->setSubmissionId($this->_article->getId());
+		$author->setSubmissionId($this->_submission->getId());
 		$author->setEmail($this->_defaultEmail);
 		$author->setPrimaryContact(1);
 		$author->setIncludeInBrowse(true);
@@ -543,20 +587,21 @@ class BepressImportDom {
 		$pdfFilename = basename($this->_pdfPath);
 
 		// Create a representation of the article (i.e. a galley)
-		$representationDao = Application::getRepresentationDAO();
-		$representation = $representationDao->newDataObject();
-		$representation->setSubmissionId($this->_article->getId());
-		$representation->setName($pdfFilename, $this->_primaryLocale);
-		$representation->setSequence(1);
-		$representation->setLabel('PDF');
-		$representation->setLocale($this->_primaryLocale);
-		$representationDao->insertObject($representation);
+
+		$articleGalleyDao = DAORegistry::getDao('ArticleGalleyDAO');
+		$articleGalley = $articleGalleyDao->newDataObject();
+		$articleGalley->setData('publicationId', $this->_submission->getCurrentPublication()->getId());
+		$articleGalley->setName($pdfFilename, $this->_primaryLocale);
+		$articleGalley->setSequence(1);
+		$articleGalley->setLabel('PDF');
+		$articleGalley->setLocale($this->_primaryLocale);
+		$articleGalleyDao->insertObject($articleGalley);
 
 		// Add the PDF file and link representation with submission file
 		$genreDao = DAORegistry::getDAO('GenreDAO');
 		$genre = $genreDao->getByKey('SUBMISSION', $this->_journal->getId());
 
-		$submissionFileManager = new SubmissionFileManager($this->_journal->getId(), $this->_article->getId());
+		$submissionFileManager = new SubmissionFileManager($this->_journal->getId(), $this->_submission->getId());
 
 		import('lib.pkp.classes.submission.SubmissionFile'); // constants
 		$submissionFile = $submissionFileManager->copySubmissionFile(
@@ -566,10 +611,10 @@ class BepressImportDom {
 			null,
 			$genre->getId(),
 			ASSOC_TYPE_REPRESENTATION,
-			$representation->getId()
+			$articleGalley->getId()
 		);
-		$representation->setFileId($submissionFile->getFileId());
-		$representationDao->updateObject($representation);
+		$articleGalley->setFileId($submissionFile->getFileId());
+		$articleGalleyDao->updateObject($articleGalley);
 	}
 
 	function _getArticleTitle() {
@@ -580,15 +625,15 @@ class BepressImportDom {
 
 	function _cleanupFailure() {
 		$issueDao = DAORegistry::getDAO('IssueDAO');
-		$articleDao = DAORegistry::getDAO('ArticleDAO');
+		$submissionDao = DAORegistry::getDAO('SubmissionDAO');
 
 		foreach ($this->_dependentItems as $dependentItem) {
 			switch ($dependentItem) {
 				case 'issue':
-					$issueDao->deleteIssue($this->_issue);
+					$issueDao->deleteObject($this->_issue);
 					break;
 				case 'article':
-					$articleDao->deleteArticle($this->_article);
+					$submissionDao->deleteObject($this->_submission);
 					break;
 				default:
 					fatalError ('Cleanup Failure: Unimplemented type');
