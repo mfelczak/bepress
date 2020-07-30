@@ -159,21 +159,23 @@ class BepressImportPlugin extends ImportExportPlugin {
 						$xmlArticle = $this->getDocument($xmlArticleFile);
 						if ($xmlArticle) {
 							$number = null;
-							preg_match_all('/\d+/',basename(dirname(dirname($xmlArticleFile))), $number);
-							$number = array_shift(array_shift($number));
+							preg_match_all('/\d+/', basename(dirname(dirname($xmlArticleFile))), $number);
+							$shiftedArray = array_shift($number);
+							$number = array_shift($shiftedArray);
 
 							$volume = null;
-							preg_match_all('/\d+/',basename(dirname(dirname(dirname($xmlArticleFile)))), $volume);
-							$volume = array_shift(array_shift($volume));
+							preg_match_all('/\d+/', basename(dirname(dirname(dirname($xmlArticleFile)))), $volume);
+							$shiftedArray = array_shift($volume);
+							$volume = array_shift($shiftedArray);
 							$importDom = new BepressImportDom(
-									$journal,
-									$user,
-									$editor,
-									$xmlArticle,
-									$pdfArticleFile,
-									$volume,
-									$number,
-									$defaultEmail
+								$journal,
+								$user,
+								$editor,
+								$xmlArticle,
+								$pdfArticleFile,
+								$volume,
+								$number,
+								$defaultEmail
 							);
 							$returner = $importDom->importArticle();
 							unset($importDom);
@@ -192,7 +194,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 									$issueTitle = $issue->getIssueIdentification();
 									echo __('plugins.importexport.bepress.issueImport', array('title' => $issueTitle)) . "\n\n";
 								}
-								if ($currSectionId != $sectionId){
+								if ($currSectionId != $sectionId) {
 									$currSectionId = $sectionId;
 									$sectionTitle = $section->getLocalizedTitle();
 									echo __('plugins.importexport.bepress.sectionImport', array('title' => $sectionTitle)) . "\n\n";
@@ -202,7 +204,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 									$allSectionIds[] = $sectionId;
 								}
 
-								$articleTitle = $article->getLocalizedTitle();
+								$articleTitle = $article->getCurrentPublication()->getLocalizedTitle();
 								echo __('plugins.importexport.bepress.articleImported', array('title' => $articleTitle)) . "\n\n";
 							}
 						}

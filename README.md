@@ -1,7 +1,7 @@
 # OJS bepress Digital Commons import plugin
 Plugin to import bepress Digital Commons journal to OJS 3.1.1 or newer.
 
-**This branch is under active development to add OJS 3.2 compatibility and is not ready for production use.** If you're working with OJS 3.1.1 or OJS 3.1.2 please use the corresponding branches.
+This branch is for OJS 3.2.0 or newer. If you're working with OJS 3.1.1 or OJS 3.1.2 please use the corresponding branches.
 
 ## Requirements
 
@@ -28,15 +28,15 @@ where:
 - `#` is the article # folder that contains the article metadata.xml and fulltext.pdf files
 
 ### Plugin installation
-This plugin will need to be installed in your **OJS 3.1.1 or newer** installation:
+This plugin will need to be installed in your **OJS 3.2.0 or newer** installation:
 - Ensure that the plugin branch/version matches your version of OJS
 - The destination folder for the plugin should be `plugins/importexport/bepress`
 
-For example, to install this plugin via git for OJS 3.1.2:
+For example, to install this plugin via git for OJS 3.2.1:
 - `cd /path/to/ojs`
 - `git clone https://github.com/mfelczak/bepress.git plugins/importexport/bepress`
 - `cd plugins/importexport/bepress`
-- `git checkout -b stable-3_1_2 origin/stable-3_1_2`
+- `git checkout -b stable-3_2 origin/stable-3_2`
 - `cd ../../..`
 - `php lib/pkp/tools/installPluginVersion.php plugins/importexport/bepress/version.xml`
 
