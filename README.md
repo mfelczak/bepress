@@ -60,6 +60,40 @@ where:
 - `defaultEmail`: assigned to article metadata when author email not provided in import XML
 - `importPath`: full filepath to import bepress files (e.g. /home/user/bepress_xml/journalName)
 
+### Localization
+This plugin can handle localized fields for a number of elements. The following fields are currently supported:
+- title
+- abstract
+- keyword
+- subject-area
+- discipline
+
+If no locale attribute is specified for any these elements, text will be imported using the journal's primary locale.
+
+The following examples would be considered valid.
+
+No locale:
+
+```xml
+<title>Full Article Title</title>
+```
+
+
+A single locale:
+
+```xml
+<title locale="en_US">Full Article Title</title>
+```
+
+Multiple locales:
+
+```xml
+<keywords>
+    <keyword locale="en_US">Keyword</keyword>
+    <keyword locale="de_DE">Stichwort</keyword>
+</keywords>
+```
+
 ## Limitations
 
 Due to limitations with exported bepress XML metadata, the plugin imports published articles in sequential order. Imported articles may need to be further sorted in their respective issue’s table of contents in OJS. In addition, while the plugin attempts to preserve issue sections, some section names and assignments may need correction following the import process.

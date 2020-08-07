@@ -27,6 +27,7 @@ class BepressImportDom {
 	var $_xmlArticle = null;
 	var $_articleNode = null;
 	var $_articleTitle = null;
+	var $_articleTitleLocalizedArray = null;
 	var $_submission = null;
 	var $_section = null;
 	var $_issue = null;
@@ -64,8 +65,8 @@ class BepressImportDom {
 		$this->_articleNode = $this->_xmlArticle->getChildByName('document');
 		if (!$this->_articleNode) return null;
 
-		$this->_getArticleTitle();
 		$this->_primaryLocale = $this->_journal->getPrimaryLocale();
+		$this->_getArticleTitle();
 
 		$result = $this->_handleArticleNode();
 
@@ -178,32 +179,30 @@ class BepressImportDom {
 		$publication->setData('datePublished', $articlePublicationDate);
 		$publication->setData('accessStatus', ARTICLE_ACCESS_OPEN);
 		$publication->setData('seq', $this->_submission->getId());
-		$publication->setData('title', $this->_articleTitle, $this->_primaryLocale);
+
+		// Get article title, possibly in multiple locales
+		if (!empty($this->_articleTitleLocalizedArray)) {
+			foreach ($this->_articleTitleLocalizedArray as $locale => $titleList) {
+				foreach ($titleList as $titleText) {
+					$publication->setData('title', $titleText, $locale);
+				}
+			}
+		} else {
+			// Throw error if no titles for any locale
+			$this->_errors[] = array('plugins.importexport.bepress.import.error.articleTitleMissing', array());
+			return null;
+		}
 
 		$publication->stampModified();
 		$publication->setData('status', STATUS_PUBLISHED);
 		$publication->setData('version', 1);
 
 		// Get article abstract if it exists, possibly in multiple locales
-		$abstractText = '';
-		$abstractNode = $this->_articleNode->getChildByName('abstract');
-		if ($abstractNode) {
-			$abstractLocale = $abstractNode->getAttribute('locale');
-			if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
-			$abstractText = $abstractNode->getValue();
-			$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
-			if ($abstractText) $publication->setData('abstract', $abstractText, $abstractLocale);
-
-		} else {
-			$abstractsNode = $this->_articleNode->getChildByName('abstracts');
-			if ($abstractsNode) {
-				for ($i = 0; $abstractNode = $abstractsNode->getChildByName('abstract', $i); $i++) {
-					$abstractLocale = $abstractNode->getAttribute('locale');
-					if (!$abstractLocale) $abstractLocale = $this->_primaryLocale;
-					$abstractText = $abstractNode->getValue();
-					$abstractText = html_entity_decode(trim($abstractText), ENT_HTML5);
-					if ($abstractText) $publication->setData('abstract', $abstractText, $abstractLocale);
-
+		$abstractLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'abstract', 'abstracts');
+		if (!empty($abstractLocalizedArray)) {
+			foreach ($abstractLocalizedArray as $locale => $abstractList) {
+				foreach ($abstractList as $abstractText) {
+					$publication->setData('abstract', $abstractText, $locale);
 				}
 			}
 		}
@@ -299,15 +298,17 @@ class BepressImportDom {
 
 		// Process article keywords
 		$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO'); /* @var $submissionKeywordDao SubmissionKeywordDAO */
-		$keywordsNode = $this->_articleNode->getChildByName('keywords');
-		$keywords[$this->_primaryLocale] = array();
-		if ($keywordsNode) {
-			for ($i = 0; $keywordNode = $keywordsNode->getChildByName('keyword', $i); $i++) {
-				$keywordText = $keywordNode->getValue();
-				// Check if all keywords are in single element separated by ;
-				$curKeywords = explode(';', $keywordText);
-				foreach ($curKeywords as $curKeyword) {
-					$keywords[$this->_primaryLocale][] = $curKeyword;
+		$keywordsLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'keyword', 'keywords');
+		$keywords = array();
+		if (!empty($keywordsLocalizedArray)) {
+			foreach ($keywordsLocalizedArray as $locale => $keywordList) {
+				$keywords[$locale] = array();
+				foreach ($keywordList as $keywordText) {
+					// Check if all keywords are in single element separated by ;
+					$curKeywords = explode(';', $keywordText);
+					foreach ($curKeywords as $curKeyword) {
+						$keywords[$locale][] = $curKeyword;
+					}
 				}
 			}
 		}
@@ -315,15 +316,17 @@ class BepressImportDom {
 
 		// Process article subjects
 		$submissionSubjectDAO = DAORegistry::getDAO('SubmissionSubjectDAO');
-		$subjectsNode = $this->_articleNode->getChildByName('subject-areas');
-		$subjects[$this->_primaryLocale] = array();
-		if ($subjectsNode) {
-			for ($i = 0; $subjectNode = $subjectsNode->getChildByName('subject-area', $i); $i++) {
-				$subjectText = $subjectNode->getValue();
-				// Check if all subjects are in single element separated by ;
-				$curSubjects = explode(';', $subjectText);
-				foreach ($curSubjects as $curSubject) {
-					$subjects[$this->_primaryLocale][] = $curSubject;
+		$subjectsLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'subject-area', 'subject-areas');
+		$subjects = array();
+		if (!empty($subjectsLocalizedArray)) {
+			foreach ($subjectsLocalizedArray as $locale => $subjectList) {
+				$subjects[$locale] = array();
+				foreach ($subjectList as $subjectText) {
+					// Check if all subjects are in single elemnt separated by ;
+					$curSubjects = explode(';', $subjectText);
+					foreach ($curSubjects as $curSubject) {
+						$subjects[$locale][] = $curSubject;
+					}
 				}
 			}
 		}
@@ -331,15 +334,17 @@ class BepressImportDom {
 
 		// Process article disciplines
 		$submissionDisciplineDAO = DAORegistry::getDAO('SubmissionDisciplineDAO');
-		$disciplinesNode = $this->_articleNode->getChildByName('disciplines');
-		$disciplines[$this->_primaryLocale] = array();
-		if ($disciplinesNode) {
-			for ($i = 0; $disciplineNode = $disciplinesNode->getChildByName('discipline', $i); $i++) {
-				$disciplineText = $disciplineNode->getValue();
-				// Check if all disciplines are in single element separated by ;
-				$curDisciplines = explode(';', $disciplineText);
-				foreach ($curDisciplines as $curDiscipline) {
-					$disciplines[$this->_primaryLocale][] = $curDiscipline;
+		$disciplineLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'discipline', 'disciplines');
+		$disciplines = array();
+		if (!empty($disciplineLocalizedArray)) {
+			foreach ($disciplineLocalizedArray as $locale => $disciplineList) {
+				$disciplines[$locale] = array();
+				foreach ($disciplineList as $disciplineText) {
+					// Check if all disciplines are in a single element separated by ;
+					$curDisciplines = explode(';', $disciplineText);
+					foreach ($curDisciplines as $curDiscipline) {
+						$disciplines[$locale][] = $curDiscipline;
+					}
 				}
 			}
 		}
@@ -618,9 +623,22 @@ class BepressImportDom {
 	}
 
 	function _getArticleTitle() {
-		$titleNode = $this->_articleNode->getChildByName('title');
-		$title = $titleNode->getValue();
-		$this->_articleTitle = html_entity_decode(trim($title), ENT_HTML5);
+		$titleLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'title', 'titles');
+
+		// Check if we have a title for primary locale, if not assign first title element to primary locale
+		$containsPrimaryLocale = false;
+		foreach ($titleLocalizedArray as $locale => $titleList) {
+			if ($locale === $this->_primaryLocale) {
+				$containsPrimaryLocale = true;
+				break;
+			}
+		}
+
+		if (!$containsPrimaryLocale) {
+			$titleLocalizedArray[$this->_primaryLocale] = $titleLocalizedArray[0];
+		}
+		$this->_articleTitleLocalizedArray = $titleLocalizedArray;
+		$this->_articleTitle = $this->_articleTitleLocalizedArray[$this->_primaryLocale][0];
 	}
 
 	function _cleanupFailure() {
@@ -647,6 +665,55 @@ class BepressImportDom {
 				echo __($error[0]);
 			}
 		}
+	}
+
+	/**
+	 * Extracted localized elements from node
+	 *
+	 * @param $primaryNode XMLNode Element-containing node
+	 * @param $elementNameSingular string node name, singular form
+	 * @param $elementNamePlural string node name, plural form
+	 * @return array Array of localized text (locale => [text, text])
+	 */
+	function _getLocalizedElements($primaryNode, $elementNameSingular, $elementNamePlural) {
+
+		$elementText = '';
+		$returner = array();
+
+		// Search for singular element first
+		$elementNode = $primaryNode->getChildByName($elementNameSingular);
+		if ($elementNode) {
+			$elementLocale = $elementNode->getAttribute('locale');
+			if (!$elementLocale) $elementLocale= $this->_primaryLocale;
+			$elementText = $elementNode->getValue();
+			$elementText = html_entity_decode($elementText, ENT_HTML5);
+			if (isset($elementText)) {
+				// Add single element text item to locale array
+				$returner[$elementLocale] = array($elementText);
+			}
+		} else {
+			// If none found, search for elemtent's parent node
+			$elementsNode = $primaryNode->getChildByName($elementNamePlural);
+			if ($elementsNode) {
+				for ($i = 0; $elementNode = $elementsNode->getChildByName($elementNameSingular, $i); $i++) {
+					$elementLocale = $elementNode->getAttribute('locale');
+					if (!$elementLocale) $elementLocale = $this->_primaryLocale;
+					$elementText = $elementNode->getValue();
+					$elementText = html_entity_decode($elementText, ENT_HTML5);
+					if (isset($elementText)) {
+						if (empty($returner[$elementLocale])) {
+							// If no array exists for this locale create one
+							$returner[$elementLocale] = array($elementText);
+						} else {
+							// Otherwise push new element to existing locale array
+							array_push($returner[$elementLocale], $elementText);
+						}
+					}
+				}
+			}
+		}
+
+		return $returner;
 	}
 }
 
