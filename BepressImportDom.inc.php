@@ -281,7 +281,6 @@ class BepressImportDom {
 		if (!$newPublication->getData('copyrightHolder')) {
 			$newPublication->setData('copyrightHolder', $this->_submission->_getContextLicenseFieldValue(null, PERMISSIONS_FIELD_COPYRIGHT_HOLDER, $publication));
 		}
-		//$this->_submission->setData('status',STATUS_PUBLISHED);
 		if (!$newPublication->getData('copyrightYear') && $this->_submission->getData('status') == STATUS_PUBLISHED) {
 			$newPublication->setData('copyrightYear', $this->_submission->_getContextLicenseFieldValue(null, PERMISSIONS_FIELD_COPYRIGHT_YEAR, $publication));
 		}
@@ -536,23 +535,74 @@ class BepressImportDom {
 	function _handleAuthorNode(&$authorNode, $authorIndex, $userGroupId) {
 		$author = new Author();
 
-		$fname = $authorNode->getChildValue('fname');
-		$lname = $authorNode->getChildValue('lname');
-		$mname = $authorNode->getChildValue('mname');
-		$suffix = $authorNode->getChildValue('suffix');
-
-		$email = $authorNode->getChildValue('email');
-		$affiliation = $authorNode->getChildValue('institution');
-
-		$author->setGivenName(isset($fname) ? $fname : '', $this->_primaryLocale);
-		$author->setFamilyName(isset($lname) ? $lname : $this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
-
-		if (isset($mname) || isset($suffix)) {
-			$author->setPreferredPublicName(trim("$fname $mname $lname $suffix"), $this->_primaryLocale);
+		// Given name -- required field
+		$fnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'fname', 'fnames');
+		// Use locale array if present, otherwise use empty char string
+		if (!empty($fnameLocalizedArray)) {
+			foreach ($fnameLocalizedArray as $locale => $fnameList) {
+				foreach ($fnameList as $fnameText) {
+					$author->setGivenName($fnameText, $locale);
+				}
+			}
+		} else {
+			$author->setGivenName('', $this->_primaryLocale);
+			$fnameLocalizedArray = array(
+				$this->_primaryLocale => array('')
+			);
 		}
 
+		// Family name
+		$lnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'lname', 'lnames');
+		// Use locale array if present, otherwise use journal name
+		if (!empty($lnameLocalizedArray)) {
+			foreach ($lnameLocalizedArray as $locale => $lnameList) {
+				foreach ($lnameList as $lnameText) {
+					$author->setFamilyName($lnameText, $locale);
+				}
+			}
+		} else {
+			$author->setFamilyName($this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
+			$lnameLocalizedArray = array(
+				$this->_primaryLocale => array(
+					$this->_journal->getName($this->_primaryLocale)
+				)
+			);
+		}
+
+		// Middle name and suffix
+		$mnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'mname', 'mnames');
+		$suffixLocalizedArray = $this->_getLocalizedElements($authorNode, 'suffix', 'suffixes');
+
+		// If we have either a middle name or suffix, create a prefered name
+		if (!empty($mnameLocalizedArray) || !empty($suffixLocalizedArray)) {
+			// For adding localized prefered names, loop over given/first names
+			// as they are the only required name field and will be present
+			// with at least the primary locale and empty string
+			foreach ($fnameLocalizedArray as $locale => $fnameList) {
+				$fname = $fnameLocalizedArray[$locale][0];
+				$mname = $mnameLocalizedArray[$locale][0];
+				$lname = $lnameLocalizedArray[$locale][0];
+				$suffix = $suffixLocalizedArray[$locale][0];
+				$author->setPreferredPublicName(trim("$fname $mname $lname $suffix"), $locale);
+			}
+		}
+
+		// Affiliation
+		$affiliationLocalizedArray = $this->_getLocalizedElements($authorNode, 'institution', 'institutions');
+
+		// Use locale array if present, otherwise use empty string
+		if(!empty($affiliationLocalizedArray)) {
+			foreach ($affiliationLocalizedArray as $locale => $affiliationList) {
+				foreach ($affiliationList as $affiliationText) {
+					$author->setAffiliation($affiliationText, $locale);
+				}
+			}
+		} else {
+			$author->setAffiliation('', $this->_primaryLocale);
+		}
+
+		$email = $authorNode->getChildValue('email');
 		$author->setEmail(isset($email) ? $email : $this->_defaultEmail);
-		$author->setAffiliation((isset($affiliation) ? $affiliation : ''), $this->_primaryLocale);
 
 		$author->setSequence($authorIndex + 1); // 1-based
 		$author->setSubmissionId($this->_submission->getId());
@@ -668,12 +718,12 @@ class BepressImportDom {
 	}
 
 	/**
-	 * Extracted localized elements from node
+	 * Extract localized elements from XMLNode
 	 *
 	 * @param $primaryNode XMLNode Element-containing node
 	 * @param $elementNameSingular string node name, singular form
 	 * @param $elementNamePlural string node name, plural form
-	 * @return array Array of localized text (locale => [text, text])
+	 * @return array Array of localized text [locale => [text, text]]
 	 */
 	function _getLocalizedElements($primaryNode, $elementNameSingular, $elementNamePlural) {
 
@@ -692,7 +742,7 @@ class BepressImportDom {
 				$returner[$elementLocale] = array($elementText);
 			}
 		} else {
-			// If none found, search for elemtent's parent node
+			// If none found, search for element's parent node
 			$elementsNode = $primaryNode->getChildByName($elementNamePlural);
 			if ($elementsNode) {
 				for ($i = 0; $elementNode = $elementsNode->getChildByName($elementNameSingular, $i); $i++) {
@@ -702,7 +752,7 @@ class BepressImportDom {
 					$elementText = html_entity_decode($elementText, ENT_HTML5);
 					if (isset($elementText)) {
 						if (empty($returner[$elementLocale])) {
-							// If no array exists for this locale create one
+							// If no array exists for this locale, create one
 							$returner[$elementLocale] = array($elementText);
 						} else {
 							// Otherwise push new element to existing locale array
