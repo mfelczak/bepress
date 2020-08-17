@@ -67,6 +67,12 @@ This plugin can handle localized fields for a number of elements. The following 
 - keyword
 - subject-area
 - discipline
+- author elements:
+    - fname
+    - mname
+    - lname
+    - suffix
+    - institution
 
 If no locale attribute is specified for any these elements, text will be imported using the journal's primary locale.
 

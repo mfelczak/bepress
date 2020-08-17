@@ -10,17 +10,41 @@
 		<authors>
 			<author>
 				<email>author1@email.com</email>
-				<institution>Midwestern University</institution>
-				<lname>Author1LastName</lname>
-				<fname>Author1FirstName</fname>
-				<mname>Author1MiddleName</mname>
+				<institutions>
+					<institution locale="en_US">Midwestern University</institution>
+					<institution locale="de_DE">Midwestern Universität</institution>
+				</institutions>
+				<lnames>
+					<lname locale="en_US">Author1LastName</lname>
+					<lname locale="de_DE">Author1Nachname</lname>
+				</lnames>
+				<fnames>
+					<fname locale="en_US">Author1FirstName</fname>
+					<fname locale="de_DE">Author1Vorname</fname>
+				</fnames>
+				<mnames>
+					<mname locale="en_US">Author1MiddleName</mname>
+					<mname locale="de_DE">Author1ZweiterVorname</mname>
+				</mnames>
 			</author>
 			<author>
 				<email>author2@email.com</email>
-				<institution>Western University</institution>
-				<lname>Author2LastName</lname>
-				<fname>Author2FirstName</fname>
-				<mname>Author2MiddleName</mname>
+				<institutions>
+					<institution locale="en_US">Western University</institution>
+					<institution locale="de_DE">Western Universität</institution>
+				</institutions>
+				<lnames>
+					<lname locale="en_US">Author2LastName</lname>
+					<lname locale="de_DE">Author2Nachname</lname>
+				</lnames>
+				<fnames>
+					<fname locale="en_US">Author2FirstName</fname>
+					<fname locale="de_DE">Author2Vorname</fname>
+				</fnames>
+				<mnames>
+					<mname locale="en_US">Author2MiddleName</mname>
+					<mname locale="de_DE">Author2ZweiterVorname</mname>
+				</mnames>
 			</author>
 		</authors>
 		<subject-areas>
