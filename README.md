@@ -6,7 +6,7 @@ This branch is for OJS 3.2.0 or newer. If you're working with OJS 3.1.1 or OJS 3
 ## Requirements
 
 ### Import Files
-To get started you will need to request an export archive of your Digital Commons journal article metadata (metadata.xml) and galley files (fulltext.pdf) for all published articles. The article metadata XML will be in a [custom document-export format](sample-metadata.xml).
+To get started you will need to request an export archive of your Digital Commons journal article metadata (metadata.xml) and galley files (fulltext.pdf) for all published articles. The article metadata XML will be in a [custom document-export format](sample-metadata-single-locale.xml).
 
 You will need to review your metadata XML files and ensure that all required data is included. If needed, the metadata.xml files can be edited to manually add any missing, required metadata. The following metadata fields are required:
 
@@ -61,7 +61,7 @@ where:
 - `importPath`: full filepath to import bepress files (e.g. /home/user/bepress_xml/journalName)
 
 ### Localization
-This plugin can handle localized fields for a number of elements. The following fields are currently supported:
+This plugin can handle localized fields for a number of elements. To import multilingual articles, journal article metadata must use the [multi-locale document-export format](sample-metadata-multiple-locales.xml). The following fields are currently supported:
 - title
 - abstract
 - keyword
@@ -99,6 +99,8 @@ Multiple locales:
     <keyword locale="de_DE">Stichwort</keyword>
 </keywords>
 ```
+
+See [monolingual](sample-metadata-single-locale.xml) and [multilingual](sample-metadata-multiple-locales.xml) sample metadata for more comprehensive examples.
 
 ## Limitations
 

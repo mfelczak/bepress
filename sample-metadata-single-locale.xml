@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<documents>
+	<document>
+		<title>Full Article Title</title>
+		<publication-date>2017-10-12T00:00:00-07:00</publication-date>
+		<state>published</state>
+		<authors>
+			<author>
+				<email>author1@email.com</email>
+				<institution>Midwestern University</institution>
+				<lname>Author1LastName</lname>
+				<fname>Author1FirstName</fname>
+				<mname>Author1MiddleName</mname>
+			</author>
+			<author>
+				<email>author2@email.com</email>
+				<institution locale="en_US">Western University</institution>
+				<lname locale="en_US">Author2LastName</lname>
+				<fname locale="en_US">Author2FirstName</fname>
+				<mname locale="en_US">Author2MiddleName</mname>
+			</author>
+		</authors>
+		<subject-areas>
+			<subject-area>Education</subject-area>
+		</subject-areas>
+		<keywords>
+			<keyword>collaboration</keyword>
+			<keyword>technology</keyword>
+		</keywords>
+		<disciplines>
+			<discipline>Natural Sciences</discipline>
+		</disciplines>
+		<abstract>&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi eu mi at odio lobortis gravida ut eu lorem. Mauris eleifend, urna ac ornare posuere, erat nisi mollis purus, vel fringilla justo orci luctus ex. Cras vel lacus nulla. In nec varius massa. Suspendisse bibendum vel risus id feugiat. Ut sagittis posuere odio id rutrum. Nulla sodales sem turpis, id maximus elit elementum efficitur. Quisque a ornare nisl, id rhoncus erat. Cras tortor metus, porttitor eu pulvinar eget, tempus maximus elit. Curabitur quis tristique nisl. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. In malesuada, ipsum vel interdum malesuada, augue libero accumsan metus, in suscipit nunc arcu non felis. Quisque et porta felis, ac maximus tellus. Nullam non libero urna.&lt;/p&gt;</abstract>
+		<document-type>commentary</document-type>
+		<type>article</type>
+		<fpage>21</fpage>
+		<lpage>55</lpage>
+		<submission-date>2017-08-29T12:18:09-07:00</submission-date>
+		<publication-title>Journal Name</publication-title>
+		<fields>
+			<field name="doi" type="string">
+				<value>10.5555/12345678</value>
+			</field>
+			<field name="peer_reviewed" type="boolean">
+				<value>true</value>
+			</field>
+			<field name="publication_date" type="date">
+				<value>2017-10-12T00:00:00-07:00</value>
+			</field>
+		</fields>
+	</document>
+</documents>
