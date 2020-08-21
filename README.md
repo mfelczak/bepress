@@ -62,17 +62,18 @@ where:
 
 ### Localization
 This plugin can handle localized fields for a number of elements. To import multilingual articles, journal article metadata must use the [multi-locale document-export format](sample-metadata-multiple-locales.xml). The following fields are currently supported:
-- title
 - abstract
-- keyword
-- subject-area
-- discipline
 - author elements:
     - fname
     - mname
     - lname
     - suffix
     - institution
+- discipline
+- galleys
+- keyword
+- subject-area
+- title
 
 If no locale attribute is specified for any these elements, text will be imported using the journal's primary locale.
 
@@ -99,6 +100,8 @@ Multiple locales:
     <keyword locale="de_DE">Stichwort</keyword>
 </keywords>
 ```
+
+NB: If multi-locale galleys are used, the files specified in the `<galley>` tags must match the filenames exactly and follow the `fulltext.{localeKey}.pdf` naming scheme where {localeKey} is the corresponding locale key, e.g. `fulltext.en_US.pdf`. For single locale imports not using a `<galley>` tag, the locale key in the pdf file name is optional.
 
 See [monolingual](sample-metadata-single-locale.xml) and [multilingual](sample-metadata-multiple-locales.xml) sample metadata for more comprehensive examples.
 
