@@ -145,15 +145,16 @@ class BepressImportPlugin extends ImportExportPlugin {
 					closedir($articleFileHandle);
 
 					$xmlArticleFile = null;
-					$pdfArticleFile = null;
+					$pdfArticleFiles = array();
 					foreach($importFiles as $importFile){
 						if (preg_match('/metadata\.xml$/', $importFile) && !$xmlArticleFile){
 							$xmlArticleFile = $articlePath . '/' . $importFile;
-						} elseif (preg_match('/fulltext\.pdf$/', $importFile) && !$pdfArticleFile){
+						} elseif (preg_match('/fulltext(\.[a-z]{2}_[A-Z]{2})?\.pdf$/', $importFile)){
 							$pdfArticleFile = $articlePath . '/' . $importFile;
+							array_push($pdfArticleFiles, $pdfArticleFile);
 						}
 					}
-					if (!$xmlArticleFile || !$pdfArticleFile) continue;
+					if (!$xmlArticleFile || empty($pdfArticleFiles)) continue;
 
 					if (is_file($xmlArticleFile)) {
 						$xmlArticle = $this->getDocument($xmlArticleFile);
@@ -172,7 +173,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 								$user,
 								$editor,
 								$xmlArticle,
-								$pdfArticleFile,
+								$pdfArticleFiles,
 								$volume,
 								$number,
 								$defaultEmail

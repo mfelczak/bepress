@@ -63,6 +63,10 @@
 			<abstract locale="en_US">&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi eu mi at odio lobortis gravida ut eu lorem. Mauris eleifend, urna ac ornare posuere, erat nisi mollis purus, vel fringilla justo orci luctus ex. Cras vel lacus nulla. In nec varius massa. Suspendisse bibendum vel risus id feugiat. Ut sagittis posuere odio id rutrum. Nulla sodales sem turpis, id maximus elit elementum efficitur. Quisque a ornare nisl, id rhoncus erat. Cras tortor metus, porttitor eu pulvinar eget, tempus maximus elit. Curabitur quis tristique nisl. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. In malesuada, ipsum vel interdum malesuada, augue libero accumsan metus, in suscipit nunc arcu non felis. Quisque et porta felis, ac maximus tellus. Nullam non libero urna.&lt;/p&gt;</abstract>
 			<abstract locale="de_DE">&lt;p&gt;Cras tortor metus, porttitor eu pulvinar eget, tempus maximus elit. Curabitur quis tristique nisl. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. In malesuada, ipsum vel interdum malesuada, augue libero accumsan metus, in suscipit nunc arcu non felis. Quisque et porta felis, ac maximus tellus. Nullam non libero urna. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi eu mi at odio lobortis gravida ut eu lorem. Mauris eleifend, urna ac ornare posuere, erat nisi mollis purus, vel fringilla justo orci luctus ex. Cras vel lacus nulla. In nec varius massa. Suspendisse bibendum vel risus id feugiat. Ut sagittis posuere odio id rutrum. Nulla sodales sem turpis, id maximus elit elementum efficitur. Quisque a ornare nisl, id rhoncus erat.&lt;/p&gt;</abstract>
 		</abstracts>
+		<galleys>
+			<galley locale="en_US">fulltext.en_US.pdf</galley>
+			<galley locale="de_DE">fulltext.de_DE.pdf</galley>
+		</galleys>
 		<document-type>commentary</document-type>
 		<type>article</type>
 		<fpage>21</fpage>

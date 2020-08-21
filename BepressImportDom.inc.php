@@ -32,7 +32,7 @@ class BepressImportDom {
 	var $_section = null;
 	var $_issue = null;
 	var $_primaryLocale = null;
-	var $_pdfPath = null;
+	var $_pdfPaths = null;
 	var $_volume = null;
 	var $_number = null;
 	var $_defaultEmail = null;
@@ -42,12 +42,12 @@ class BepressImportDom {
 	/**
 	 * Constructor.
 	 */
-	function __construct(&$journal, &$user, &$editor, &$xmlArticle, $pdfPath, $volume, $number, $defaultEmail) {
+	function __construct(&$journal, &$user, &$editor, &$xmlArticle, $pdfPaths, $volume, $number, $defaultEmail) {
 		$this->_journal = $journal;
 		$this->_user = $user;
 		$this->_editor = $editor;
 		$this->_xmlArticle = $xmlArticle;
-		$this->_pdfPath = $pdfPath;
+		$this->_pdfPaths = $pdfPaths;
 		$this->_volume = $volume;
 		$this->_number = $number;
 		$this->_defaultEmail = $defaultEmail;
@@ -58,7 +58,7 @@ class BepressImportDom {
 	 * @return array Imported objects with the following keys: 'issue', 'section', 'article'
 	 */
 	function importArticle() {
-		if (!$this->_journal || !$this->_user || !$this->_editor || !$this->_xmlArticle || !$this->_pdfPath || !$this->_volume || !$this->_number || !$this->_defaultEmail) {
+		if (!$this->_journal || !$this->_user || !$this->_editor || !$this->_xmlArticle || !$this->_pdfPaths || !$this->_volume || !$this->_number || !$this->_defaultEmail) {
 			return null;
 		}
 
@@ -350,7 +350,29 @@ class BepressImportDom {
 		$submissionDisciplineDAO->insertDisciplines($disciplines, $this->_submission->getCurrentPublication()->getId());
 
 		// Handle PDF galleys
-		$this->_handlePDFGalleyNode();
+		$galleyLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'galley', 'galleys');
+		// Check if galley or galleys nodes exist If not empty, we have at least one galley or galleys node
+		if (!empty($galleyLocalizedArray)) {
+			// Handle PDF galley node based on `galleyLocalizedArray`
+			foreach ($galleyLocalizedArray as $locale => $galleyList) {
+				foreach ($galleyList as $galleyText) {
+					// Handle PDF galley node for pdf file path as identified in $galleyText using $locale
+					foreach ($this->_pdfPaths as $pdfPath) {
+						if (strpos($pdfPath,$galleyText)) {
+							$this->_handlePDFGalleyNode($pdfPath, $locale);
+							break;
+						}
+					}
+				}
+			}
+
+		} else {
+			// If it is empty, then handle PDF galley node based on files alone
+			// i.e. use primary locale for the file(s)
+			foreach ($this->_pdfPaths as $pdfPath) {
+				$this->_handlePDFGalleyNode($pdfPath);
+			}
+		}
 
 		// Index the article
 		$articleSearchIndex = new ArticleSearchIndex();
@@ -637,9 +659,12 @@ class BepressImportDom {
 
 	/**
 	 * Import a PDF Galley.
+	 *
+	 * @param $pdfPath string PDF file location path
+	 * @param $locale string|null [Optional] Locale to use. If null, will use primary locale.
 	 */
-	function _handlePDFGalleyNode() {
-		$pdfFilename = basename($this->_pdfPath);
+	function _handlePDFGalleyNode($pdfPath, $locale = null) {
+		$pdfFilename = basename($pdfPath);
 
 		// Create a representation of the article (i.e. a galley)
 
@@ -649,7 +674,7 @@ class BepressImportDom {
 		$articleGalley->setName($pdfFilename, $this->_primaryLocale);
 		$articleGalley->setSequence(1);
 		$articleGalley->setLabel('PDF');
-		$articleGalley->setLocale($this->_primaryLocale);
+		$articleGalley->setLocale($locale == null ? $this->_primaryLocale : $locale);
 		$articleGalleyDao->insertObject($articleGalley);
 
 		// Add the PDF file and link representation with submission file
@@ -660,7 +685,7 @@ class BepressImportDom {
 
 		import('lib.pkp.classes.submission.SubmissionFile'); // constants
 		$submissionFile = $submissionFileManager->copySubmissionFile(
-			$this->_pdfPath,
+			$pdfPath,
 			SUBMISSION_FILE_PROOF,
 			$this->_editor->getId(),
 			null,
