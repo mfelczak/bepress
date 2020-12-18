@@ -82,7 +82,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 
 		$editor = $userDao->getByUsername($editorUsername);
 		if (!$editor) {
-			echo __('plugins.importexport.bepress.unknownUser', array('username' => $editorName)) . "\n";
+			echo __('plugins.importexport.bepress.unknownUser', array('username' => $editorUsername)) . "\n";
 			exit();
 		}
 

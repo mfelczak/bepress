@@ -263,7 +263,10 @@ class BepressImportDom {
 			}
 		}
 
-		if (isset($doiValue)) $publicationDao->changePubId($this->_submission->getCurrentPublication()->getId(), 'doi', $doiValue);
+		if (isset($doiValue)) {
+			PluginRegistry::loadCategory('pubIds', true, $this->_journal->getId());
+			$publicationDao->changePubId($this->_submission->getCurrentPublication()->getId(), 'doi', $doiValue);
+		}
 
 		// Set copyright year and holder and license permissions
 		$copyrightYear = date("Y", strtotime($articlePublicationDate));
@@ -557,9 +560,18 @@ class BepressImportDom {
 	function _handleAuthorNode(&$authorNode, $authorIndex, $userGroupId) {
 		$author = new Author();
 
-		// Given name -- required field
 		$fnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'fname', 'fnames');
-		// Use locale array if present, otherwise use empty char string
+		$lnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'lname', 'lnames');
+
+		// In case lname is only element present, swap fnameLocalizedArray and lnameLocalizedArray
+		// Handles edge case where one name is present only in the lname element
+		if (empty($fnameLocalizedArray) && !empty($lnameLocalizedArray)) {
+			$fnameLocalizedArray = $lnameLocalizedArray;
+			$lnameLocalizedArray = array();
+		}
+
+		// Given name -- required field
+		// Use locale array if present, otherwise use journal name
 		if (!empty($fnameLocalizedArray)) {
 			foreach ($fnameLocalizedArray as $locale => $fnameList) {
 				foreach ($fnameList as $fnameText) {
@@ -567,15 +579,16 @@ class BepressImportDom {
 				}
 			}
 		} else {
-			$author->setGivenName('', $this->_primaryLocale);
+			$author->setGivenName($this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
 			$fnameLocalizedArray = array(
-				$this->_primaryLocale => array('')
+				$this->_primaryLocale => array(
+					$this->_journal->getName($this->_primaryLocale)
+				)
 			);
 		}
 
 		// Family name
-		$lnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'lname', 'lnames');
-		// Use locale array if present, otherwise use journal name
+		// Use locale array if present, otherwise use empty char string
 		if (!empty($lnameLocalizedArray)) {
 			foreach ($lnameLocalizedArray as $locale => $lnameList) {
 				foreach ($lnameList as $lnameText) {
@@ -583,11 +596,9 @@ class BepressImportDom {
 				}
 			}
 		} else {
-			$author->setFamilyName($this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
+			$author->setFamilyName('', $this->_primaryLocale);
 			$lnameLocalizedArray = array(
-				$this->_primaryLocale => array(
-					$this->_journal->getName($this->_primaryLocale)
-				)
+				$this->_primaryLocale => array('')
 			);
 		}
 
@@ -644,8 +655,8 @@ class BepressImportDom {
 	 */
 	function _createEmptyAuthor($userGroupId) {
 		$author = new Author();
-		$author->setFirstName('');
-		$author->setLastName($this->_journal->getName($this->_primaryLocale));
+		$author->setGivenName($this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
+		$author->setFamilyName('', $this->_primaryLocale);
 		$author->setSequence(1);
 		$author->setSubmissionId($this->_submission->getId());
 		$author->setEmail($this->_defaultEmail);
