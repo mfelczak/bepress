@@ -69,6 +69,7 @@ This plugin can handle localized fields for a number of elements. To import mult
     - lname
     - suffix
     - institution
+	- preferredname
 - discipline
 - galleys
 - keyword
