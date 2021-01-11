@@ -606,9 +606,19 @@ class BepressImportDom {
 		$mnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'mname', 'mnames');
 		$suffixLocalizedArray = $this->_getLocalizedElements($authorNode, 'suffix', 'suffixes');
 
-		// If we have either a middle name or suffix, create a prefered name
-		if (!empty($mnameLocalizedArray) || !empty($suffixLocalizedArray)) {
-			// For adding localized prefered names, loop over given/first names
+		// Preferred public name
+		$preferredNameLocalizedArray = $this->_getLocalizedElements($authorNode, 'preferredname', 'preferrednames');
+
+		// If we have a preferred public name field, use that over concatenated name with middle name and suffix
+		if (!empty($preferredNameLocalizedArray)) {
+			foreach ($preferredNameLocalizedArray as $locale => $preferredNameList) {
+				$preferredName = $preferredNameLocalizedArray[$locale][0];
+				$author->setPreferredPublicName($preferredName, $locale);
+			}
+		} else if (!empty($mnameLocalizedArray) || !empty($suffixLocalizedArray)) {
+			// Otherwise, if we have either a middle name or suffix, create a preferred name
+
+			// For adding localized preferred names, loop over given/first names
 			// as they are the only required name field and will be present
 			// with at least the primary locale and empty string
 			foreach ($fnameLocalizedArray as $locale => $fnameList) {
