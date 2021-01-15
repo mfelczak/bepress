@@ -75,6 +75,7 @@ This plugin can handle localized fields for a number of elements. To import mult
 - keyword
 - subject-area
 - title
+- subtitle
 
 If no locale attribute is specified for any these elements, text will be imported using the journal's primary locale.
 
