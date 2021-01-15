@@ -28,6 +28,8 @@ class BepressImportDom {
 	var $_articleNode = null;
 	var $_articleTitle = null;
 	var $_articleTitleLocalizedArray = null;
+	var $_articleSubtitle = null;
+	var $_articleSubtitleLocalizedArray = null;
 	var $_submission = null;
 	var $_section = null;
 	var $_issue = null;
@@ -191,6 +193,15 @@ class BepressImportDom {
 			// Throw error if no titles for any locale
 			$this->_errors[] = array('plugins.importexport.bepress.import.error.articleTitleMissing', array());
 			return null;
+		}
+
+		// Get article subtitle (if present), possibly in multiple locales
+		if (!empty($this->_articleSubtitleLocalizedArray)) {
+			foreach ($this->_articleSubtitleLocalizedArray as $locale => $subtitleList) {
+				foreach($subtitleList as $subtitleText) {
+					$publication->setData('subtitle', $subtitleText, $locale);
+				}
+			}
 		}
 
 		$publication->stampModified();
@@ -720,6 +731,7 @@ class BepressImportDom {
 
 	function _getArticleTitle() {
 		$titleLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'title', 'titles');
+		$subtitleLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'subtitle', 'subtitles');
 
 		// Check if we have a title for primary locale, if not assign first title element to primary locale
 		$containsPrimaryLocale = false;
@@ -732,9 +744,20 @@ class BepressImportDom {
 
 		if (!$containsPrimaryLocale) {
 			$titleLocalizedArray[$this->_primaryLocale] = $titleLocalizedArray[0];
+
+			// Add subtitle if present
+			if (!empty($subtitleLocalizedArray)) {
+				$subtitleLocalizedArray[$this->_primaryLocale] = $subtitleLocalizedArray[0];
+			}
 		}
 		$this->_articleTitleLocalizedArray = $titleLocalizedArray;
 		$this->_articleTitle = $this->_articleTitleLocalizedArray[$this->_primaryLocale][0];
+
+		// Include subtitle if present
+		if (!empty($subtitleLocalizedArray)) {
+			$this->_articleSubtitleLocalizedArray = $subtitleLocalizedArray;
+			$this->_articleSubtitle = $this->_articleSubtitleLocalizedArray[$this->_primaryLocale][0];
+		}
 	}
 
 	function _cleanupFailure() {
