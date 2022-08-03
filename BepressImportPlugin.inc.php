@@ -2,8 +2,8 @@
 /**
  * @file plugins/importexport/bepress/BepressImportPlugin.inc.php
  *
- * Copyright (c) 2017 Simon Fraser University
- * Copyright (c) 2017 John Willinsky
+ * Copyright (c) 2017-2022 Simon Fraser University
+ * Copyright (c) 2017-2022 John Willinsky
  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
  *
  * @class BepressImportPlugin
@@ -12,16 +12,19 @@
  * @brief Bepress XML import plugin
  */
 
+import('lib.pkp.classes.xml.PKPXMLParser');
 import('lib.pkp.classes.plugins.ImportExportPlugin');
 
 class BepressImportPlugin extends ImportExportPlugin {
 	/**
 	 * Called as a plugin is registered to the registry
-	 * @param $category String Name of category plugin was registered to
+	 * @param string $category Name of category plugin was registered to
+	 * @param int|null $mainContextId
 	 * @return boolean True iff plugin initialized successfully; if false,
 	 * 	the plugin will not be registered.
 	 */
-	function register($category, $path, $mainContextId = null) {
+	public function register($category, $path, $mainContextId = null)
+	{
 		$success = parent::register($category, $path);
 		$this->addLocaleData();
 		return $success;
@@ -32,15 +35,18 @@ class BepressImportPlugin extends ImportExportPlugin {
 	 * its category.
 	 * @return String name of plugin
 	 */
-	function getName() {
+	public function getName()
+	{
 		return 'BepressImportPlugin';
 	}
 
-	function getDisplayName() {
+	public function getDisplayName()
+	{
 		return __('plugins.importexport.bepress.displayName');
 	}
 
-	function getDescription() {
+	public function getDescription()
+	{
 		return __('plugins.importexport.bepress.description');
 	}
 
@@ -48,7 +54,8 @@ class BepressImportPlugin extends ImportExportPlugin {
 	 * Execute import tasks using the command-line interface.
 	 * @param $args array plugin options
 	 */
-	function executeCLI($scriptName, &$args) {
+	public function executeCLI($scriptName, &$args)
+	{
 
 		if (sizeof($args) != 5) {
 			$this->usage($scriptName);
@@ -85,6 +92,10 @@ class BepressImportPlugin extends ImportExportPlugin {
 			echo __('plugins.importexport.bepress.unknownUser', array('username' => $editorUsername)) . "\n";
 			exit();
 		}
+		// FIXME: This attaches the associated user to the request and is a workaround for no users being present
+		//     when running CLI tools. This assumes that given the username supplied should be used as the
+		//  authenticated user. To revisit later.
+		Registry::set('user', $editor);
 
 		if (!file_exists($directoryName) && is_dir($directoryName) ) {
 			echo __('plugins.importexport.bepress.directoryDoesNotExist', array('directory' => $directoryName)) . "\n";
@@ -97,7 +108,7 @@ class BepressImportPlugin extends ImportExportPlugin {
 		}
 
 		$this->import('BepressImportDom');
-		echo __('plugins.importexport.bepress.importStart');
+		echo __('plugins.importexport.bepress.importStart') . "\n";
 
 		// Import volumes from oldest to newest
 		$volumeHandle = opendir($directoryName);
@@ -110,13 +121,13 @@ class BepressImportPlugin extends ImportExportPlugin {
 			if (!is_dir($volumePath) || preg_match('/^\./', $volumeName) || !$volumeName) continue;
 
 			// Import issues from oldest to newest
-			$importIssues = array();
+			$importIssues = [];
 			$issueHandle = opendir($volumePath);
 			while ($importIssues[] = readdir($issueHandle));
 			sort($importIssues, SORT_NATURAL);
 			closedir($issueHandle);
 
-			$allIssueIds = array();
+			$allIssueIds = [];
 			$curIssueId = 0;
 
 			foreach ($importIssues as $issueName){
@@ -124,40 +135,40 @@ class BepressImportPlugin extends ImportExportPlugin {
 				if (!is_dir($issuePath) || preg_match('/^\./', $issueName) || !$issueName) continue;
 
 				// Import articles from oldest to newest
-				$importArticles = array();
+				$importArticles = [];
 				$articleHandle = opendir($issuePath);
 				while ($importArticles[] = readdir($articleHandle));
 				sort($importArticles, SORT_NATURAL);
 				closedir($articleHandle);
 
 				$currSectionId = 0;
-				$allSectionIds = array();
+				$allSectionIds = [];
 
 				foreach ($importArticles as $entry) {
 					$articlePath = $issuePath . '/' . $entry;
-					if (!is_dir($articlePath) || preg_match('/^\./', $entry)) continue;
+					if (!is_dir($articlePath) || preg_match('/^\./', $entry) || !$entry) continue;
 
 					// Process all article files
 					$articleFileHandle = opendir($articlePath);
-					$importFiles = array();
+					$importFiles = [];
 					while ($importFiles[] = readdir($articleFileHandle));
 					sort($importFiles, SORT_NATURAL);
 					closedir($articleFileHandle);
 
 					$xmlArticleFile = null;
-					$pdfArticleFiles = array();
+					$pdfArticleFiles = [];
 					foreach($importFiles as $importFile){
 						if (preg_match('/metadata\.xml$/', $importFile) && !$xmlArticleFile){
 							$xmlArticleFile = $articlePath . '/' . $importFile;
 						} elseif (preg_match('/fulltext(\.[a-z]{2}_[A-Z]{2})?\.pdf$/', $importFile)){
 							$pdfArticleFile = $articlePath . '/' . $importFile;
-							array_push($pdfArticleFiles, $pdfArticleFile);
+							$pdfArticleFiles[] = $pdfArticleFile;
 						}
 					}
 					if (!$xmlArticleFile || empty($pdfArticleFiles)) continue;
 
 					if (is_file($xmlArticleFile)) {
-						$xmlArticle = $this->getDocument($xmlArticleFile);
+						$xmlArticle = $this->_getDocument($xmlArticleFile);
 						if ($xmlArticle) {
 							$number = null;
 							preg_match_all('/\d+/', basename(dirname(dirname($xmlArticleFile))), $number);
@@ -242,17 +253,18 @@ class BepressImportPlugin extends ImportExportPlugin {
 	/**
 	 * Display the command-line usage information
 	 */
-	function usage($scriptName) {
+	public function usage($scriptName)
+	{
 		echo __('plugins.importexport.bepress.cliUsage', array(
 				'scriptName' => $scriptName,
 				'pluginName' => $this->getName()
 		)) . "\n";
 	}
 
-	function getDocument($fileName) {
-		$parser = new XMLParser();
+	private function _getDocument($fileName)
+	{
+		$parser = new PKPXMLParser();
 		$returner = $parser->parse($fileName);
 		return $returner;
 	}
 }
-?>

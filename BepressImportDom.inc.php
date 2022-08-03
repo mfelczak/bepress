@@ -2,8 +2,8 @@
 /**
  * @file plugins/importexport/bepress/BepressImportDom.inc.php
  *
- * Copyright (c) 2017 Simon Fraser University
- * Copyright (c) 2017 John Willinsky
+ * Copyright (c) 2017-2022 Simon Fraser University
+ * Copyright (c) 2017-2022 John Willinsky
  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
  *
  * @class Bepress
@@ -11,8 +11,8 @@
  *
  * @brief Bepress XML import DOM functions
  */
-import('lib.pkp.classes.xml.XMLCustomWriter');
-import('lib.pkp.classes.file.SubmissionFileManager');
+import('lib.pkp.classes.file.FileManager');
+import('lib.pkp.classes.submission.SubmissionFile');
 import('classes.issue.Issue');
 import('classes.journal.Section');
 import('classes.submission.Submission');
@@ -20,29 +20,30 @@ import('classes.article.Author');
 import('classes.search.ArticleSearchIndex');
 
 class BepressImportDom {
-	var $_journal = null;
-	var $_user = null;
-	var $_editor = null;
-	var $_editorGroupId = null;
-	var $_xmlArticle = null;
-	var $_articleNode = null;
-	var $_articleTitle = null;
-	var $_articleTitleLocalizedArray = null;
-	var $_submission = null;
-	var $_section = null;
-	var $_issue = null;
-	var $_primaryLocale = null;
-	var $_pdfPaths = null;
-	var $_volume = null;
-	var $_number = null;
-	var $_defaultEmail = null;
-	var $_dependentItems = array();
-	var $_errors = array();
+	private ?Journal $_journal = null;
+	private ?User $_user = null;
+	private ?User $_editor = null;
+	private ?int $_editorGroupId = null;
+	private ?XMLNode $_xmlArticle = null;
+	private ?XMLNode $_articleNode = null;
+	private ?string $_articleTitle = null;
+	private ?array $_articleTitleLocalizedArray = null;
+	private ?Submission $_submission = null;
+	private ?Section $_section = null;
+	private ?Issue $_issue = null;
+	private ?string $_primaryLocale = null;
+	private ?array $_pdfPaths = null;
+	private ?string $_volume = null;
+	private ?string $_number = null;
+	private ?string $_defaultEmail = null;
+	private array $_dependentItems = [];
+	private array $_errors = [];
 
 	/**
 	 * Constructor.
 	 */
-	function __construct(&$journal, &$user, &$editor, &$xmlArticle, $pdfPaths, $volume, $number, $defaultEmail) {
+	public function __construct(Journal &$journal, User &$user, User $editor, XMLNode &$xmlArticle, array $pdfPaths, string $volume, string $number, string $defaultEmail)
+	{
 		$this->_journal = $journal;
 		$this->_user = $user;
 		$this->_editor = $editor;
@@ -55,9 +56,10 @@ class BepressImportDom {
 
 	/**
 	 * Import an article along with parent section and issue
-	 * @return array Imported objects with the following keys: 'issue', 'section', 'article'
+	 * @return array|null Imported objects with the following keys: 'issue', 'section', 'article'
 	 */
-	function importArticle() {
+	public function importArticle() : ?array
+	{
 		if (!$this->_journal || !$this->_user || !$this->_editor || !$this->_xmlArticle || !$this->_pdfPaths || !$this->_volume || !$this->_number || !$this->_defaultEmail) {
 			return null;
 		}
@@ -79,9 +81,10 @@ class BepressImportDom {
 
 	/**
 	 * Handle the Article node, construct article and related objects from XML.
-	 * @return array Imported objects with the following keys: 'issue', 'section', 'article'
+	 * @return array|null Imported objects with the following keys: 'issue', 'section', 'article'
 	 */
-	function _handleArticleNode() {
+	private function _handleArticleNode(): ?array
+	{
 		// Process issue first
 		$this->_handleIssue();
 
@@ -167,13 +170,13 @@ class BepressImportDom {
 		$this->_dependentItems[] = 'article';
 
 		// Create publication object and add info
+		/** @var PublicationDAO $publicationDao */
 		$publicationDao = DAORegistry::getDAO('PublicationDAO');
 
 		$publication = $publicationDao->newDataObject();
 		/** @var $publication PKPPublication */
 		$publication->setData('submissionId', $this->_submission->getId());
-		$publication->setData('locale', $this->_primaryLocale);
-		$publication->setData('languages', 'en');
+		$publication->setData('languages', [PKPLocale::getIso1FromLocale($this->_primaryLocale)]);
 		$publication->setData('sectionId', $this->_section->getId());
 		$publication->setData('issueId', $this->_issue->getId());
 		$publication->setData('datePublished', $articlePublicationDate);
@@ -189,7 +192,7 @@ class BepressImportDom {
 			}
 		} else {
 			// Throw error if no titles for any locale
-			$this->_errors[] = array('plugins.importexport.bepress.import.error.articleTitleMissing', array());
+			$this->_errors[] = array('plugins.importexport.bepress.import.error.articleTitleMissing', []);
 			return null;
 		}
 
@@ -238,6 +241,7 @@ class BepressImportDom {
 
 		// Assign editor as participant in production stage
 		$userGroupId = null;
+		/** @var UserGroupDAO $userGroupDao */
 		$userGroupDao = DAORegistry::getDAO('UserGroupDAO');
 		$userGroupIds = $userGroupDao->getUserGroupIdsByRoleId(ROLE_ID_MANAGER, $this->_journal->getId());
 		foreach ($userGroupIds as $editorGroupId) {
@@ -248,7 +252,7 @@ class BepressImportDom {
 			$stageAssignmentDao = DAORegistry::getDAO('StageAssignmentDAO');
 			$stageAssignment = $stageAssignmentDao->build($this->_submission->getId(), $editorGroupId, $this->_editor->getId());
 		} else {
-			$this->_errors[] = array('plugins.importexport.bepress.import.error.missingEditorGroupId', array());
+			$this->_errors[] = array('plugins.importexport.bepress.import.error.missingEditorGroupId', []);
 			return null;
 		}
 
@@ -270,8 +274,22 @@ class BepressImportDom {
 
 		// Set copyright year and holder and license permissions
 		$copyrightYear = date("Y", strtotime($articlePublicationDate));
-		// FIXME: `Submission::getAuthorString()` deprecated in 3.2.0.0
-		$copyrightHolder = $this->_submission->getAuthorString();
+
+		// Re-fetch publication with updated author data
+		/** @var Publication $publication */
+		$publication = $publicationDao->getById($publication->getId());
+		$authorUserGroupIds = array_map(function($author) {
+			return $author->getData('userGroupId');
+		}, $publication->getData('authors'));
+
+		$authorUserGroups = [];
+		foreach (array_unique($authorUserGroupIds) as $authorUserGroupId) {
+			/* @var $userGroupDao UserGroupDAO */
+			$userGroupDao = DAORegistry::getDAO('UserGroupDAO');
+			$authorUserGroups[] = $userGroupDao->getById($authorUserGroupId);
+		}
+
+		$copyrightHolder = $publication->getAuthorString($authorUserGroups);
 
 		// Create new temp publication to add license info
 		$newPublication = $publicationDao->newDataObject();
@@ -301,10 +319,10 @@ class BepressImportDom {
 		// Process article keywords
 		$submissionKeywordDao = DAORegistry::getDAO('SubmissionKeywordDAO'); /* @var $submissionKeywordDao SubmissionKeywordDAO */
 		$keywordsLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'keyword', 'keywords');
-		$keywords = array();
+		$keywords = [];
 		if (!empty($keywordsLocalizedArray)) {
 			foreach ($keywordsLocalizedArray as $locale => $keywordList) {
-				$keywords[$locale] = array();
+				$keywords[$locale] = [];
 				foreach ($keywordList as $keywordText) {
 					// Check if all keywords are in single element separated by ;
 					$curKeywords = explode(';', $keywordText);
@@ -319,10 +337,10 @@ class BepressImportDom {
 		// Process article subjects
 		$submissionSubjectDAO = DAORegistry::getDAO('SubmissionSubjectDAO');
 		$subjectsLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'subject-area', 'subject-areas');
-		$subjects = array();
+		$subjects = [];
 		if (!empty($subjectsLocalizedArray)) {
 			foreach ($subjectsLocalizedArray as $locale => $subjectList) {
-				$subjects[$locale] = array();
+				$subjects[$locale] = [];
 				foreach ($subjectList as $subjectText) {
 					// Check if all subjects are in single elemnt separated by ;
 					$curSubjects = explode(';', $subjectText);
@@ -337,10 +355,10 @@ class BepressImportDom {
 		// Process article disciplines
 		$submissionDisciplineDAO = DAORegistry::getDAO('SubmissionDisciplineDAO');
 		$disciplineLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'discipline', 'disciplines');
-		$disciplines = array();
+		$disciplines = [];
 		if (!empty($disciplineLocalizedArray)) {
 			foreach ($disciplineLocalizedArray as $locale => $disciplineList) {
-				$disciplines[$locale] = array();
+				$disciplines[$locale] = [];
 				foreach ($disciplineList as $disciplineText) {
 					// Check if all disciplines are in a single element separated by ;
 					$curDisciplines = explode(';', $disciplineText);
@@ -394,7 +412,8 @@ class BepressImportDom {
 	/**
 	 * Handle issue data and create new issue if it doesn't already exist
 	 */
-	function _handleIssue() {
+	private function _handleIssue() : void
+	{
 		// Ensure we have a volume and issue number
 		if (!$this->_volume || !$this->_number) {
 			$this->_errors[] = array('plugins.importexport.bepress.import.error.missingVolumeNumber', array('title' => $this->_articleTitle));
@@ -468,7 +487,8 @@ class BepressImportDom {
 	/**
 	 * Handle section data and create new section if it doesn't already exist
 	 */
-	function _handleSection() {
+	private function _handleSection() : void
+	{
 		//Get section name from either the document-type or type tag
 		$sectionName = null;
 		$documentType = $this->_articleNode ? $this->_articleNode->getChildValue('document-type') : null;
@@ -524,7 +544,8 @@ class BepressImportDom {
 	/**
 	 * Process all article authors.
 	 */
-	function _processAuthors() {
+	private function _processAuthors()
+	{
 		$authorDao = DAORegistry::getDAO('AuthorDAO');
 
 		$userGroupId = null;
@@ -553,11 +574,12 @@ class BepressImportDom {
 
 	/**
 	 * Handle an author node (i.e. convert an author from DOM to DAO).
-	 * @param $authorNode DOMElement
+	 * @param $authorNode XMLnode
 	 * @param $authorIndex int 0 for first author, 1 for second, ...
 	 * @param $userGroupId int author user group ID
 	 */
-	function _handleAuthorNode(&$authorNode, $authorIndex, $userGroupId) {
+	private function _handleAuthorNode(XMLNode &$authorNode, int $authorIndex, int $userGroupId): Author
+	{
 		$author = new Author();
 
 		$fnameLocalizedArray = $this->_getLocalizedElements($authorNode, 'fname', 'fnames');
@@ -567,7 +589,7 @@ class BepressImportDom {
 		// Handles edge case where one name is present only in the lname element
 		if (empty($fnameLocalizedArray) && !empty($lnameLocalizedArray)) {
 			$fnameLocalizedArray = $lnameLocalizedArray;
-			$lnameLocalizedArray = array();
+			$lnameLocalizedArray = [];
 		}
 
 		// Given name -- required field
@@ -661,9 +683,9 @@ class BepressImportDom {
 	/**
 	 * Add 'empty' author for articles with no author information
 	 * @param $userGroupId int author user group ID
-	 * @return Author
 	 */
-	function _createEmptyAuthor($userGroupId) {
+	private function _createEmptyAuthor(int $userGroupId): Author
+	{
 		$author = new Author();
 		$author->setGivenName($this->_journal->getName($this->_primaryLocale), $this->_primaryLocale);
 		$author->setFamilyName('', $this->_primaryLocale);
@@ -683,42 +705,62 @@ class BepressImportDom {
 	 *
 	 * @param $pdfPath string PDF file location path
 	 * @param $locale string|null [Optional] Locale to use. If null, will use primary locale.
+	 * @throws Exception
 	 */
-	function _handlePDFGalleyNode($pdfPath, $locale = null) {
+	private function _handlePDFGalleyNode(string $pdfPath, ?string $locale = null) : void
+	{
 		$pdfFilename = basename($pdfPath);
 
 		// Create a representation of the article (i.e. a galley)
 
+		/** @var ArticleGalleyDAO $articleGalleyDao */
 		$articleGalleyDao = DAORegistry::getDao('ArticleGalleyDAO');
-		$articleGalley = $articleGalleyDao->newDataObject();
-		$articleGalley->setData('publicationId', $this->_submission->getCurrentPublication()->getId());
-		$articleGalley->setName($pdfFilename, $this->_primaryLocale);
-		$articleGalley->setSequence(1);
-		$articleGalley->setLabel('PDF');
-		$articleGalley->setLocale($locale == null ? $this->_primaryLocale : $locale);
-		$articleGalleyDao->insertObject($articleGalley);
+		$newArticleGalley = $articleGalleyDao->newDataObject();
+		$newArticleGalley->setData('publicationId', $this->_submission->getCurrentPublication()->getId());
+		$newArticleGalley->setName($pdfFilename, $this->_primaryLocale);
+		$newArticleGalley->setSequence(1);
+		$newArticleGalley->setLabel('PDF');
+		$newArticleGalley->setLocale($locale ?: $this->_primaryLocale);
+		$newArticleGalleyId = $articleGalleyDao->insertObject($newArticleGalley);
 
 		// Add the PDF file and link representation with submission file
+		/** @var \APP\Services\SubmissionFileService $submissionFileService */
+		$submissionFileService = Services::get('submissionFile');
+		/** @var \PKP\Services\PKPFileService $fileService */
+		$fileService = Services::get('file');
+
+		$submissionDir = $submissionFileService->getSubmissionDir($this->_submission->getData('contextId'), $this->_submission->getId());
+		$newFileId = $fileService->add(
+			$pdfPath,
+			$submissionDir . '/' . uniqid() . 'pdf'
+		);
+
+		/** @var GenreDAO $genreDao */
 		$genreDao = DAORegistry::getDAO('GenreDAO');
 		$genre = $genreDao->getByKey('SUBMISSION', $this->_journal->getId());
 
-		$submissionFileManager = new SubmissionFileManager($this->_journal->getId(), $this->_submission->getId());
+		/** @var SubmissionFileDAO $submissionFileDao */
+		$submissionFileDao = DAORegistry::getDAO('SubmissionFileDAO');
+		$newSubmissionFile = $submissionFileDao->newDataObject();
+		$newSubmissionFile->setData('submissionId', $this->_submission->getId());
+		$newSubmissionFile->setData('fileId', $newFileId);
+		$newSubmissionFile->setData('genreId', $genre->getId());
+		$newSubmissionFile->setData('fileStage', SUBMISSION_FILE_PROOF);
+		$newSubmissionFile->setData('uploaderUserId', $this->_editor->getId());
+		$newSubmissionFile->setData('createdAt', Core::getCurrentDate());
+		$newSubmissionFile->setData('updatedAt', Core::getCurrentDate());
+		$newSubmissionFile->setData('assocType', ASSOC_TYPE_REPRESENTATION);
+		$newSubmissionFile->setData('assocId', $newArticleGalleyId);
+		$newSubmissionFile->setData('name', $pdfFilename, $locale == null ? $this->_primaryLocale : $locale);
+		$submissionFile = $submissionFileService->add($newSubmissionFile, Application::get()->getRequest());
 
-		import('lib.pkp.classes.submission.SubmissionFile'); // constants
-		$submissionFile = $submissionFileManager->copySubmissionFile(
-			$pdfPath,
-			SUBMISSION_FILE_PROOF,
-			$this->_editor->getId(),
-			null,
-			$genre->getId(),
-			ASSOC_TYPE_REPRESENTATION,
-			$articleGalley->getId()
-		);
-		$articleGalley->setFileId($submissionFile->getFileId());
+		$articleGalley = $articleGalleyDao->getById($newArticleGalleyId);
+		$articleGalley->setFileId($submissionFile->getData('id'));
 		$articleGalleyDao->updateObject($articleGalley);
 	}
 
-	function _getArticleTitle() {
+	private function _getArticleTitle()
+	{
 		$titleLocalizedArray = $this->_getLocalizedElements($this->_articleNode, 'title', 'titles');
 
 		// Check if we have a title for primary locale, if not assign first title element to primary locale
@@ -737,7 +779,8 @@ class BepressImportDom {
 		$this->_articleTitle = $this->_articleTitleLocalizedArray[$this->_primaryLocale][0];
 	}
 
-	function _cleanupFailure() {
+	private function _cleanupFailure() : void
+	{
 		$issueDao = DAORegistry::getDAO('IssueDAO');
 		$submissionDao = DAORegistry::getDAO('SubmissionDAO');
 
@@ -755,11 +798,7 @@ class BepressImportDom {
 		}
 
 		foreach ($this->_errors as $error) {
-			if (size($error) > 1) {
-				echo __($error[0], $error[1]);
-			} else {
-				echo __($error[0]);
-			}
+			echo __($error[0], $error[1] ?? []);
 		}
 	}
 
@@ -771,10 +810,11 @@ class BepressImportDom {
 	 * @param $elementNamePlural string node name, plural form
 	 * @return array Array of localized text [locale => [text, text]]
 	 */
-	function _getLocalizedElements($primaryNode, $elementNameSingular, $elementNamePlural) {
+	private function _getLocalizedElements(XMLNode $primaryNode, string $elementNameSingular, string $elementNamePlural): array
+	{
 
 		$elementText = '';
-		$returner = array();
+		$returner = [];
 
 		// Search for singular element first
 		$elementNode = $primaryNode->getChildByName($elementNameSingular);
@@ -802,7 +842,7 @@ class BepressImportDom {
 							$returner[$elementLocale] = array($elementText);
 						} else {
 							// Otherwise push new element to existing locale array
-							array_push($returner[$elementLocale], $elementText);
+							$returner[$elementLocale][] = $elementText;
 						}
 					}
 				}
@@ -812,5 +852,3 @@ class BepressImportDom {
 		return $returner;
 	}
 }
-
-?>
