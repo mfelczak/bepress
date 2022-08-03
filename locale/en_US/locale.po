@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2022-08-03T15:10:21-07:00\n"
+"PO-Revision-Date: 2022-08-03T15:10:21-07:00\n"
+"Language: en_US\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+
+msgid "plugins.importexport.bepress.displayName"
+msgstr "Bepress Import Plugin"
+
+msgid "plugins.importexport.bepress.description"
+msgstr "Import articles into journal from Bepress XML."
+
+msgid "plugins.importexport.bepress.cliUsage"
+msgstr ""
+"Command-line tool for importing Bepress XML article data into OJS\n"
+"\t\t\tUsage:\n"
+"\t\t\t{$scriptName} journal username editorUsername defaultEmail importPath\n"
+"\t\t\tjournal - the journal into which the articles should be imported (use journal path)\n"
+"\t\t\tusername - the user to whom imported articles should be assigned; note: this user must have the Author role\n"
+"\t\t\teditorUsername - the editor to whom imported articles should be assigned; note: this user must have the Journal Editor role and access to the Production stage\n"
+"\t\t\tdefaultEmail - assigned to article metadata when author email not provided in import XML\n"
+"\t\t\timportPath - full filepath to import XML/PDF files (e.g. /home/user/import_files); folder structure must be of the form vol#/iss#/article#\n"
+""
+
+msgid "plugins.importexport.bepress.importStart"
+msgstr "Import starting ..."
+
+msgid "plugins.importexport.bepress.importEnd"
+msgstr "Import completed."
+
+msgid "plugins.importexport.bepress.unknownJournal"
+msgstr "Unknown Journal: \"{$journal}\". Exiting."
+
+msgid "plugins.importexport.bepress.unknownUser"
+msgstr "Unknown User: \"{$username}\". Exiting."
+
+msgid "plugins.importexport.bepress.unknownEmail"
+msgstr "Invalid Email: \"{$email}\". Exiting."
+
+msgid "plugins.importexport.bepress.directoryDoesNotExist"
+msgstr "The directory \"{$directory}\" does not exist. Exiting."
+
+msgid "plugins.importexport.bepress.invalidDate"
+msgstr "Invalid date format: {$value}. Skipping."
+
+msgid "plugins.importexport.bepress.unknownLocale"
+msgstr "Unknown Locale: \"{$locale}\". Skipping."
+
+msgid "plugins.importexport.bepress.unableToParseXMLDocument"
+msgstr "Unable to parse XML document in {$directory}. Skipping."
+
+msgid "plugins.importexport.bepress.import.error.missingEditorGroupId"
+msgstr "Error: The user specified as editor is not assigned an Editor role. Exiting."
+
+msgid "plugins.importexport.bepress.import.error.missingPubDate"
+msgstr "Error: The article publication date is missing for \"{$title}\". Skipping."
+
+msgid "plugins.importexport.bepress.import.error.missingVolumeNumber"
+msgstr "Error: The article volume/number is missing for \"{$title}\". Skipping."
+
+msgid "plugins.importexport.bepress.import.error.missingIssue"
+msgstr "Error: The article issue is missing for \"{$title}\". Skipping."
+
+msgid "plugins.importexport.bepress.import.error.missingSection"
+msgstr "Error: The article section is missing for \"{$title}\". Skipping."
+
+msgid "plugins.importexport.bepress.import.error.missingGalley"
+msgstr "Error: The article galley is missing for \"{$title}\""
+
+msgid "plugins.importexport.bepress.import.error.articleTitleLocaleUnsupported"
+msgstr "The article title locale is unsupported."
+
+msgid "plugins.importexport.bepress.import.error.articleTitleMissing"
+msgstr "The article title is missing."
+
+msgid "plugins.importexport.bepress.import.success.description"
+msgstr "The import was successful. Successfully-imported items are listed below."
+
+msgid "plugins.importexport.bepress.issueImport"
+msgstr "====== {$title} ======"
+
+msgid "plugins.importexport.bepress.sectionImport"
+msgstr "---{$title}---"
+
+msgid "plugins.importexport.bepress.articleImported"
+msgstr "'{$title}' successfully imported"

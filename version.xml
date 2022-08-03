@@ -4,8 +4,8 @@
 <!--
   * plugins/importexport/bepress/version.xml
   *
-  * Copyright (c) 2017-2020 Simon Fraser University
-  * Copyright (c) 2017-2020 John Willinsky
+  * Copyright (c) 2017-2022 Simon Fraser University
+  * Copyright (c) 2017-2022 John Willinsky
   * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
   *
   * Plugin version information.
@@ -13,6 +13,6 @@
 <version>
 	<application>bepress</application>
 	<type>plugins.importexport</type>
-	<release>3.2.3.0</release>
-	<date>2020-08-21</date>
+	<release>3.3.0.0</release>
+	<date>2022-08-05</date>
 </version>
